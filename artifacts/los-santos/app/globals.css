@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand: #1a8c7a;
+  --color-brand-dark: #136b5e;
+  --color-brand-light: #e8f5f3;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #0a0a0a;
@@ -8,9 +14,19 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", sans-serif;
 }
 
 * {
   box-sizing: border-box;
+}
+
+.btn-brand {
+  background-color: #1a8c7a;
+  color: #fff;
+  transition: background-color 0.15s;
+}
+.btn-brand:hover {
+  background-color: #136b5e;
 }
