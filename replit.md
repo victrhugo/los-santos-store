@@ -33,6 +33,17 @@ Shared Express API server running on port 8080.
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 - `pnpm run typecheck` — full typecheck across all packages
 
+## Admin Panel
+
+The `/admin` routes are protected by Next.js middleware using Supabase Auth.
+- `/admin/login` — login page (email + password)
+- `/admin/products` — list products, link to create
+- `/admin/products/new` — create product + add variants inline
+- `/admin/products/[id]` — manage variants for existing product
+- `/admin/orders` — list orders with status update
+
+To create the first admin user, go to Supabase Dashboard → Authentication → Users → "Invite user" or use the SQL `auth.users` table.
+
 ## Supabase Schema Expected
 
 Tables needed in Supabase:
