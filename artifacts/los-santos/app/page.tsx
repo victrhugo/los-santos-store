@@ -1,10 +1,11 @@
 import { getProducts } from "@/services/products";
 import ProductCard from "@/components/ProductCard";
+import type { Product } from "@/types";
 
 export const revalidate = 60;
 
 export default async function HomePage() {
-  let products = [];
+  let products: Product[] = [];
   let error = null;
 
   try {
