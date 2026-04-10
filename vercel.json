@@ -1,0 +1,6 @@
+{
+  "buildCommand": "pnpm --filter @workspace/los-santos run build",
+  "outputDirectory": "artifacts/los-santos/.next",
+  "framework": "nextjs",
+  "installCommand": "pnpm install"
+}
