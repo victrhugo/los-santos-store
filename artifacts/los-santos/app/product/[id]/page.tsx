@@ -15,6 +15,18 @@ function formatPrice(value: number) {
   }).format(value);
 }
 
+/** Creates a synthetic variant from the product itself for no-variant products. */
+function syntheticVariant(product: Product): ProductVariant {
+  return {
+    id: product.id,
+    product_id: product.id,
+    name: "Padrão",
+    price: product.price,
+    stock: 9999,
+    created_at: product.created_at,
+  };
+}
+
 export default function ProductPage() {
   const params = useParams();
   const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string | undefined);
@@ -38,7 +50,12 @@ export default function ProductPage() {
         if (prodError) setLoadError(prodError);
         setProduct(p);
         setVariants(v);
-        if (v.length > 0) setSelectedVariant(v[0]);
+        if (v.length > 0) {
+          setSelectedVariant(v[0]);
+        } else if (p) {
+          // No real variants — use the product itself as a synthetic variant
+          setSelectedVariant(syntheticVariant(p));
+        }
       } finally {
         setLoading(false);
       }
@@ -72,14 +89,23 @@ export default function ProductPage() {
     );
   }
 
+  const hasRealVariants = variants.length > 0;
+  const effectiveVariant = selectedVariant ?? (hasRealVariants ? null : syntheticVariant(product));
+  const displayPrice = effectiveVariant ? effectiveVariant.price : product.price;
+  const canBuy = effectiveVariant !== null && (hasRealVariants ? effectiveVariant.stock > 0 : true);
+
   function handleAddToCart() {
-    if (!selectedVariant) return;
-    addItem(product!, selectedVariant);
+    if (!effectiveVariant) return;
+    addItem(product!, effectiveVariant);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   }
 
-  const displayPrice = selectedVariant ? selectedVariant.price : product.price;
+  function handleBuyNow() {
+    if (!effectiveVariant) return;
+    addItem(product!, effectiveVariant);
+    router.push("/cart");
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
@@ -94,6 +120,7 @@ export default function ProductPage() {
       </Link>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        {/* Image */}
         <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden relative">
           {product.image_url ? (
             <Image
@@ -118,6 +145,7 @@ export default function ProductPage() {
           )}
         </div>
 
+        {/* Info */}
         <div className="flex flex-col">
           {product.categories?.name && (
             <span className="text-xs text-gray-500 uppercase tracking-widest mb-2">
@@ -137,7 +165,8 @@ export default function ProductPage() {
             </p>
           )}
 
-          {variants.length > 0 && (
+          {/* Variants selector — only shown when real variants exist */}
+          {hasRealVariants && (
             <div className="mb-6">
               <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
                 Variação
@@ -167,11 +196,7 @@ export default function ProductPage() {
                   <span>Preço: {formatPrice(selectedVariant.price)}</span>
                   <span>
                     Estoque:{" "}
-                    <span
-                      className={
-                        selectedVariant.stock > 0 ? "text-green-600" : "text-red-500"
-                      }
-                    >
+                    <span className={selectedVariant.stock > 0 ? "text-green-600" : "text-red-500"}>
                       {selectedVariant.stock > 0
                         ? `${selectedVariant.stock} disponíveis`
                         : "Esgotado"}
@@ -182,14 +207,19 @@ export default function ProductPage() {
             </div>
           )}
 
+          {/* No-variant availability badge */}
+          {!hasRealVariants && (
+            <div className="inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full mb-6 w-fit">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              Produto disponível
+            </div>
+          )}
+
+          {/* CTA buttons */}
           <div className="flex flex-col gap-3 mt-auto">
             <button
               onClick={handleAddToCart}
-              disabled={
-                !selectedVariant ||
-                selectedVariant.stock === 0 ||
-                variants.length === 0
-              }
+              disabled={!canBuy}
               className={`w-full py-3 px-6 rounded text-sm font-semibold transition-all ${
                 added
                   ? "bg-green-600 text-white"
@@ -200,24 +230,13 @@ export default function ProductPage() {
             </button>
 
             <button
-              onClick={() => {
-                if (selectedVariant) {
-                  addItem(product!, selectedVariant);
-                  router.push("/cart");
-                }
-              }}
-              disabled={!selectedVariant || selectedVariant.stock === 0}
+              onClick={handleBuyNow}
+              disabled={!canBuy}
               className="w-full py-3 px-6 rounded text-sm font-semibold border border-black hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Comprar agora
             </button>
           </div>
-
-          {variants.length === 0 && (
-            <p className="text-sm text-gray-400 mt-4">
-              Este produto não possui variações cadastradas.
-            </p>
-          )}
         </div>
       </div>
     </div>
