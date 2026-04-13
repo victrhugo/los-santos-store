@@ -47,7 +47,7 @@ export default function ProductPage() {
         const [{ product: p, error: prodError }, v, imgs] = await Promise.all([
           getProductById(id),
           getProductVariants(id),
-          getProductImages(id ?? ""),
+          getProductImages(id),
         ]);
         if (prodError) setLoadError(prodError);
         setProduct(p);

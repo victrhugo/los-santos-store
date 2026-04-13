@@ -123,11 +123,15 @@ export async function getProductById(
   return { product: data as Product, error: null };
 }
 
-export async function getProductImages(productId: string): Promise<ProductImage[]> {
+export async function getProductImages(productId: string | undefined): Promise<ProductImage[]> {
+  if (!productId || productId.trim() === "") {
+    return [];
+  }
+
   const { data, error } = await supabase
     .from("product_images")
     .select("*")
-    .eq("product_id", productId)
+    .eq("product_id", productId.trim())
     .order("created_at", { ascending: true });
   if (error) {
     if (error.code === "42P01") return []; // table doesn't exist yet
@@ -136,11 +140,15 @@ export async function getProductImages(productId: string): Promise<ProductImage[
   return data ?? [];
 }
 
-export async function getProductVariants(productId: string): Promise<ProductVariant[]> {
+export async function getProductVariants(productId: string | undefined): Promise<ProductVariant[]> {
+  if (!productId || productId.trim() === "") {
+    return [];
+  }
+
   const { data, error } = await supabase
     .from("product_variants")
     .select("*")
-    .eq("product_id", productId)
+    .eq("product_id", productId.trim())
     .order("price", { ascending: true });
 
   if (error) throw new Error(error.message);
