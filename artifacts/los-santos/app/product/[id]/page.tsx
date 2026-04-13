@@ -16,7 +16,8 @@ function formatPrice(value: number) {
 }
 
 export default function ProductPage() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams();
+  const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string | undefined);
   const router = useRouter();
   const { addItem } = useCart();
 

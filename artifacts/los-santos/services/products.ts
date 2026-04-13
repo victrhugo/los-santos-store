@@ -92,21 +92,29 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 export async function getProductById(
-  id: string
+  id: string | undefined
 ): Promise<{ product: Product | null; error: string | null }> {
   console.log("[getProductById] id:", id);
+
+  if (!id || id.trim() === "") {
+    console.warn("[getProductById] called with empty id");
+    return { product: null, error: "ID inválido." };
+  }
 
   const { data, error } = await supabase
     .from("products")
     .select("*, categories(id, name)")
-    .eq("id", id)
+    .eq("id", id.trim())
     .single();
 
-  console.log("[getProductById] result:", data ? `found: ${data.name}` : "not found", error ? `error: ${error.message}` : "");
+  console.log(
+    "[getProductById] result:",
+    data ? `found: ${data.name}` : "not found",
+    error ? `error: ${error.message} (code: ${error.code})` : ""
+  );
 
   if (error) {
     if (error.code === "PGRST116") {
-      // PostgREST code for "0 rows" — product simply doesn't exist
       return { product: null, error: null };
     }
     return { product: null, error: error.message };

@@ -19,36 +19,48 @@ function formatPrice(value: number) {
 }
 
 export default function EditProductPage() {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams();
+  const productId = Array.isArray(params?.id) ? params.id[0] : (params?.id as string | undefined);
+
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [variantForm, setVariantForm] = useState({
-    name: "",
-    price: "",
-    stock: "",
-  });
+  const [variantForm, setVariantForm] = useState({ name: "", price: "", stock: "" });
   const [variantLoading, setVariantLoading] = useState(false);
   const [variantError, setVariantError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("[EditProductPage] id:", id);
-    Promise.all([getProductById(id), adminGetVariants(id)])
+    console.log("[EditProductPage] params:", params, "productId:", productId);
+
+    if (!productId) {
+      setLoadError("ID do produto não encontrado na URL.");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setLoadError(null);
+
+    Promise.all([getProductById(productId), adminGetVariants(productId)])
       .then(([{ product: p, error: prodError }, v]) => {
-        if (prodError) {
-          console.error("[EditProductPage] fetch error:", prodError);
-          setLoadError(prodError);
-        }
+        console.log("[EditProductPage] product:", p?.name ?? "null", "variants:", v.length, "error:", prodError);
+        if (prodError) setLoadError(prodError);
         setProduct(p);
         setVariants(v);
       })
+      .catch((e) => {
+        const msg = e instanceof Error ? e.message : "Erro inesperado.";
+        console.error("[EditProductPage] unexpected error:", msg);
+        setLoadError(msg);
+      })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [productId]);
 
   async function handleAddVariant(e: React.FormEvent) {
     e.preventDefault();
+    if (!productId) return;
     if (!variantForm.name.trim() || !variantForm.price) {
       setVariantError("Nome e preço são obrigatórios.");
       return;
@@ -57,7 +69,7 @@ export default function EditProductPage() {
     setVariantError(null);
     try {
       const variant = await adminCreateVariant({
-        product_id: id,
+        product_id: productId,
         name: variantForm.name.trim(),
         price: parseFloat(variantForm.price),
         stock: parseInt(variantForm.stock) || 0,
@@ -84,19 +96,27 @@ export default function EditProductPage() {
     );
   }
 
-  if (!product) {
+  if (loadError || !product) {
     return (
       <div className="text-center py-16">
         {loadError ? (
           <>
-            <p className="text-red-500 font-medium mb-1">Erro ao carregar produto</p>
+            <p className="text-red-500 font-semibold mb-1">Erro ao carregar produto</p>
             <p className="text-sm text-gray-400 mb-4">{loadError}</p>
           </>
         ) : (
-          <p className="text-gray-500 mb-4">Produto não encontrado.</p>
+          <>
+            <p className="text-gray-600 font-semibold mb-1">Produto não encontrado</p>
+            <p className="text-sm text-gray-400 mb-4">
+              ID: <code className="bg-gray-100 px-1 rounded text-xs">{productId ?? "indefinido"}</code>
+            </p>
+          </>
         )}
-        <Link href="/admin/products" className="text-sm underline inline-block">
-          Voltar para produtos
+        <Link
+          href="/admin/products"
+          className="inline-flex items-center gap-1.5 text-sm text-white bg-black px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+        >
+          ← Voltar para produtos
         </Link>
       </div>
     );
@@ -164,9 +184,7 @@ export default function EditProductPage() {
               <input
                 type="text"
                 value={variantForm.name}
-                onChange={(e) =>
-                  setVariantForm((f) => ({ ...f, name: e.target.value }))
-                }
+                onChange={(e) => setVariantForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="Ex: Preto M"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
               />
@@ -180,9 +198,7 @@ export default function EditProductPage() {
                 min="0"
                 step="0.01"
                 value={variantForm.price}
-                onChange={(e) =>
-                  setVariantForm((f) => ({ ...f, price: e.target.value }))
-                }
+                onChange={(e) => setVariantForm((f) => ({ ...f, price: e.target.value }))}
                 placeholder="0,00"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
               />
@@ -195,9 +211,7 @@ export default function EditProductPage() {
                 type="number"
                 min="0"
                 value={variantForm.stock}
-                onChange={(e) =>
-                  setVariantForm((f) => ({ ...f, stock: e.target.value }))
-                }
+                onChange={(e) => setVariantForm((f) => ({ ...f, stock: e.target.value }))}
                 placeholder="0"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
               />
