@@ -1,17 +1,21 @@
-import { getProducts } from "@/services/products";
+import { getProducts, getCategoriesWithSeed } from "@/services/products";
 import HomeClient from "@/components/HomeClient";
-import type { Product } from "@/types";
+import type { Category, Product } from "@/types";
 
 export const revalidate = 60;
 
 export default async function HomePage() {
   let products: Product[] = [];
+  let categories: Category[] = [];
   let error: string | null = null;
 
   try {
-    products = await getProducts();
+    [products, categories] = await Promise.all([
+      getProducts(),
+      getCategoriesWithSeed(),
+    ]);
   } catch (e) {
-    error = e instanceof Error ? e.message : "Erro ao carregar produtos";
+    error = e instanceof Error ? e.message : "Erro ao carregar dados";
   }
 
   if (error) {
@@ -24,5 +28,5 @@ export default async function HomePage() {
     );
   }
 
-  return <HomeClient products={products} />;
+  return <HomeClient products={products} categories={categories} />;
 }

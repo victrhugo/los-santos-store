@@ -3,10 +3,11 @@
 import { useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
-import type { Product } from "@/types";
+import type { Category, Product } from "@/types";
 
 const CATEGORY_ICONS: Record<string, string> = {
   Roupas: "👕",
+  Óculos: "🕶️",
   Acessórios: "👜",
   Perfumes: "✨",
   Outro: "📦",
@@ -14,6 +15,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 
 interface Props {
   products: Product[];
+  categories: Category[];
 }
 
 function filterProducts(
@@ -34,21 +36,11 @@ function filterProducts(
   });
 }
 
-export default function HomeClient({ products }: Props) {
+export default function HomeClient({ products, categories }: Props) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const productsRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-
-  const categories = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          products.map((p) => p.categories?.name).filter(Boolean) as string[]
-        )
-      ),
-    [products]
-  );
 
   const filtered = useMemo(
     () => filterProducts(products, searchQuery, activeCategory),
@@ -157,30 +149,36 @@ export default function HomeClient({ products }: Props) {
 
           {/* Category pills */}
           <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            <button
-              onClick={() => setActiveCategory(null)}
-              className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
-                activeCategory === null
-                  ? "bg-black text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              Todos
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
-                  activeCategory === cat
-                    ? "bg-black text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                <span className="text-base leading-none">{CATEGORY_ICONS[cat] ?? "🏷️"}</span>
-                {cat}
-              </button>
-            ))}
+            {categories.length === 0 ? (
+              <span className="text-sm text-gray-400 italic">Nenhuma categoria cadastrada ainda</span>
+            ) : (
+              <>
+                <button
+                  onClick={() => setActiveCategory(null)}
+                  className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                    activeCategory === null
+                      ? "bg-black text-white"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  Todos
+                </button>
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(activeCategory === cat.name ? null : cat.name)}
+                    className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                      activeCategory === cat.name
+                        ? "bg-black text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
+                  >
+                    <span className="text-base leading-none">{CATEGORY_ICONS[cat.name] ?? "🏷️"}</span>
+                    {cat.name}
+                  </button>
+                ))}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -281,28 +279,46 @@ export default function HomeClient({ products }: Props) {
       </section>
 
       {/* Category cards */}
-      {categories.length > 0 && !hasActiveFilters && (
+      {!hasActiveFilters && (
         <section className="bg-gray-50 border-t border-gray-100 py-12">
           <div className="max-w-6xl mx-auto px-4">
             <h2 className="text-xl font-bold text-black mb-6">Explorar por categoria</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {categories.map((cat) => {
-                const count = products.filter((p) => p.categories?.name === cat).length;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => handleCategoryClick(cat)}
-                    className="group bg-white border border-gray-200 rounded-2xl p-5 text-left hover:border-black hover:shadow-md transition-all"
-                  >
-                    <div className="text-2xl mb-3">{CATEGORY_ICONS[cat] ?? "🏷️"}</div>
-                    <p className="font-semibold text-gray-900 text-sm">{cat}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {count} produto{count !== 1 ? "s" : ""}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
+            {categories.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="text-5xl mb-4">🏷️</div>
+                <p className="text-gray-600 font-semibold text-base mb-1">
+                  Nenhuma categoria cadastrada ainda
+                </p>
+                <p className="text-gray-400 text-sm mb-6">
+                  Crie categorias para organizar seus produtos.
+                </p>
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-2 bg-black text-white text-sm font-semibold px-6 py-3 rounded-full hover:bg-gray-800 transition-colors"
+                >
+                  Criar categorias
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {categories.map((cat) => {
+                  const count = products.filter((p) => p.categories?.name === cat.name).length;
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => handleCategoryClick(cat.name)}
+                      className="group bg-white border border-gray-200 rounded-2xl p-5 text-left hover:border-black hover:shadow-md transition-all"
+                    >
+                      <div className="text-2xl mb-3">{CATEGORY_ICONS[cat.name] ?? "🏷️"}</div>
+                      <p className="font-semibold text-gray-900 text-sm">{cat.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {count} produto{count !== 1 ? "s" : ""}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
       )}
