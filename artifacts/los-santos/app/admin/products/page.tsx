@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { adminGetProducts } from "@/services/admin";
 import type { Product } from "@/types";
 
@@ -30,12 +31,12 @@ export default function AdminProductsPage() {
         <div>
           <h1 className="text-xl font-bold text-black">Produtos</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {loading ? "..." : `${products.length} produto(s)`}
+            {loading ? "Carregando..." : `${products.length} produto(s) cadastrado(s)`}
           </p>
         </div>
         <Link
           href="/admin/products/new"
-          className="flex items-center gap-2 bg-black text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-colors"
+          className="flex items-center gap-2 bg-black text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -57,13 +58,13 @@ export default function AdminProductsPage() {
       )}
 
       {!loading && products.length === 0 && (
-        <div className="bg-white border border-gray-100 rounded-xl p-12 text-center">
-          <div className="text-gray-300 mb-3">
+        <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-12 text-center">
+          <div className="text-gray-200 mb-3">
             <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
             </svg>
           </div>
-          <p className="text-gray-500 font-medium mb-1">Nenhum produto ainda</p>
+          <p className="text-gray-600 font-medium mb-1">Nenhum produto ainda</p>
           <p className="text-sm text-gray-400 mb-5">
             Crie seu primeiro produto para começar a vender
           </p>
@@ -80,57 +81,58 @@ export default function AdminProductsPage() {
       )}
 
       {!loading && products.length > 0 && (
-        <div className="bg-white border border-gray-100 rounded-xl overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-5 py-3.5">
-                  Produto
-                </th>
-                <th className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide px-5 py-3.5 hidden sm:table-cell">
-                  Categoria
-                </th>
-                <th className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wide px-5 py-3.5">
-                  Preço base
-                </th>
-                <th className="px-5 py-3.5" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {products.map((product) => (
-                <tr key={product.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-5 py-4">
-                    <p className="font-medium text-gray-900">{product.name}</p>
-                    {product.description && (
-                      <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">
-                        {product.description}
-                      </p>
-                    )}
-                  </td>
-                  <td className="px-5 py-4 hidden sm:table-cell">
-                    {product.category ? (
-                      <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
-                        {product.category}
-                      </span>
-                    ) : (
-                      <span className="text-gray-300">—</span>
-                    )}
-                  </td>
-                  <td className="px-5 py-4 text-right font-medium text-gray-900">
+        <div className="space-y-3">
+          {products.map((product) => (
+            <div
+              key={product.id}
+              className="bg-white border border-gray-100 rounded-xl shadow-sm flex items-center gap-4 px-4 py-3 hover:shadow-md transition-shadow"
+            >
+              <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                {product.image_url ? (
+                  <Image
+                    src={product.image_url}
+                    alt={product.name}
+                    width={56}
+                    height={56}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-300">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900 truncate">{product.name}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {product.category && (
+                    <span className="inline-block bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">
+                      {product.category}
+                    </span>
+                  )}
+                  <span className="text-sm font-medium text-gray-700">
                     {formatPrice(product.price)}
-                  </td>
-                  <td className="px-5 py-4 text-right">
-                    <Link
-                      href={`/admin/products/${product.id}`}
-                      className="text-xs text-gray-500 hover:text-black transition-colors font-medium"
-                    >
-                      Editar variantes
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </span>
+                </div>
+                {product.description && (
+                  <p className="text-xs text-gray-400 mt-0.5 truncate">{product.description}</p>
+                )}
+              </div>
+
+              <Link
+                href={`/admin/products/${product.id}`}
+                className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-black border border-gray-200 hover:border-gray-400 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Editar
+              </Link>
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-browser";
 import type { Product, ProductVariant } from "@/types";
 
 export interface AdminOrder {
@@ -24,6 +25,18 @@ export interface CreateVariantInput {
   name: string;
   price: number;
   stock: number;
+}
+
+export async function uploadProductImage(file: File): Promise<string> {
+  const client = createClient();
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await client.storage
+    .from("product-images")
+    .upload(fileName, file, { upsert: false, contentType: file.type });
+  if (error) throw new Error(error.message);
+  const { data } = client.storage.from("product-images").getPublicUrl(fileName);
+  return data.publicUrl;
 }
 
 export async function adminGetProducts(): Promise<Product[]> {

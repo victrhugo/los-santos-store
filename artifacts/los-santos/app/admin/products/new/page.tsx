@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   adminCreateProduct,
   adminCreateVariant,
   adminDeleteVariant,
   adminGetVariants,
+  uploadProductImage,
 } from "@/services/admin";
 import type { Product, ProductVariant } from "@/types";
 
@@ -29,18 +31,44 @@ export default function NewProductPage() {
     category: "",
     price: "",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [productLoading, setProductLoading] = useState(false);
   const [productError, setProductError] = useState<string | null>(null);
   const [savedProduct, setSavedProduct] = useState<Product | null>(null);
 
   const [variants, setVariants] = useState<ProductVariant[]>([]);
-  const [variantForm, setVariantForm] = useState({
-    name: "",
-    price: "",
-    stock: "",
-  });
+  const [variantForm, setVariantForm] = useState({ name: "", price: "", stock: "" });
   const [variantLoading, setVariantLoading] = useState(false);
   const [variantError, setVariantError] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (e) => setImagePreview(e.target?.result as string);
+    reader.readAsDataURL(file);
+  }, []);
+
+  const onDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const onDragLeave = useCallback(() => setIsDragging(false), []);
+
+  const onDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const file = e.dataTransfer.files[0];
+      if (file) handleFileSelect(file);
+    },
+    [handleFileSelect]
+  );
 
   async function handleSaveProduct(e: React.FormEvent) {
     e.preventDefault();
@@ -51,11 +79,16 @@ export default function NewProductPage() {
     setProductLoading(true);
     setProductError(null);
     try {
+      let image_url: string | undefined;
+      if (imageFile) {
+        image_url = await uploadProductImage(imageFile);
+      }
       const product = await adminCreateProduct({
         name: productForm.name.trim(),
         description: productForm.description.trim(),
         category: productForm.category.trim(),
         price: productForm.price ? parseFloat(productForm.price) : 0,
+        image_url,
       });
       setSavedProduct(product);
       const existing = await adminGetVariants(product.id);
@@ -102,18 +135,22 @@ export default function NewProductPage() {
       <div className="flex items-center gap-3 mb-6">
         <Link
           href="/admin/products"
-          className="text-gray-400 hover:text-black transition-colors"
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:text-black hover:border-gray-400 transition-colors"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
-        <h1 className="text-xl font-bold text-black">Novo produto</h1>
+        <div>
+          <h1 className="text-xl font-bold text-black">Novo produto</h1>
+          <p className="text-xs text-gray-400 mt-0.5">Preencha os dados e adicione as variantes</p>
+        </div>
       </div>
 
-      <div className="bg-white border border-gray-100 rounded-xl p-6 mb-6">
-        <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-          <span className="w-5 h-5 rounded-full bg-black text-white text-xs flex items-center justify-center">
+      {/* Step 1 - Product Info */}
+      <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-6 mb-4">
+        <h2 className="text-sm font-semibold text-gray-700 mb-5 flex items-center gap-2">
+          <span className="w-5 h-5 rounded-full bg-black text-white text-xs flex items-center justify-center font-bold">
             1
           </span>
           Informações do produto
@@ -129,7 +166,78 @@ export default function NewProductPage() {
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSaveProduct} className="space-y-4">
+          <form onSubmit={handleSaveProduct} className="space-y-5">
+            {/* Image Upload */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                Imagem do produto
+              </label>
+
+              {imagePreview ? (
+                <div className="relative w-full h-48 rounded-xl overflow-hidden border border-gray-200 group">
+                  <Image
+                    src={imagePreview}
+                    alt="Preview"
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="bg-white text-black text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      Trocar imagem
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setImageFile(null); setImagePreview(null); }}
+                      className="bg-white text-red-500 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onDragOver={onDragOver}
+                  onDragLeave={onDragLeave}
+                  onDrop={onDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`w-full h-40 rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                    isDragging
+                      ? "border-black bg-gray-50"
+                      : "border-gray-200 hover:border-gray-400 hover:bg-gray-50"
+                  }`}
+                >
+                  <svg
+                    className={`w-8 h-8 mb-2 transition-colors ${isDragging ? "text-black" : "text-gray-300"}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-sm text-gray-500 font-medium">
+                    {isDragging ? "Solte a imagem aqui" : "Arraste ou clique para fazer upload"}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP até 5MB</p>
+                </div>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleFileSelect(file);
+                }}
+              />
+            </div>
+
+            {/* Name */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
                 Nome *
@@ -137,30 +245,28 @@ export default function NewProductPage() {
               <input
                 type="text"
                 value={productForm.name}
-                onChange={(e) =>
-                  setProductForm((f) => ({ ...f, name: e.target.value }))
-                }
+                onChange={(e) => setProductForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="Ex: Camiseta Premium"
                 required
                 className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
               />
             </div>
 
+            {/* Description */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
                 Descrição
               </label>
               <textarea
                 value={productForm.description}
-                onChange={(e) =>
-                  setProductForm((f) => ({ ...f, description: e.target.value }))
-                }
-                placeholder="Descrição do produto..."
+                onChange={(e) => setProductForm((f) => ({ ...f, description: e.target.value }))}
+                placeholder="Descreva o produto, materiais, diferenciais..."
                 rows={3}
                 className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors resize-none"
               />
             </div>
 
+            {/* Category + Price */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
@@ -168,16 +274,12 @@ export default function NewProductPage() {
                 </label>
                 <select
                   value={productForm.category}
-                  onChange={(e) =>
-                    setProductForm((f) => ({ ...f, category: e.target.value }))
-                  }
+                  onChange={(e) => setProductForm((f) => ({ ...f, category: e.target.value }))}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors bg-white"
                 >
                   <option value="">Selecione...</option>
                   {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
+                    <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
@@ -191,9 +293,7 @@ export default function NewProductPage() {
                   min="0"
                   step="0.01"
                   value={productForm.price}
-                  onChange={(e) =>
-                    setProductForm((f) => ({ ...f, price: e.target.value }))
-                  }
+                  onChange={(e) => setProductForm((f) => ({ ...f, price: e.target.value }))}
                   placeholder="0,00"
                   className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
                 />
@@ -209,18 +309,31 @@ export default function NewProductPage() {
             <button
               type="submit"
               disabled={productLoading}
-              className="bg-black text-white text-sm font-semibold px-6 py-2.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-60"
+              className="w-full bg-black text-white text-sm font-semibold py-3 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              {productLoading ? "Salvando..." : "Salvar produto"}
+              {productLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  {imageFile ? "Enviando imagem..." : "Salvando..."}
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Salvar produto
+                </>
+              )}
             </button>
           </form>
         )}
       </div>
 
+      {/* Step 2 - Variants */}
       {savedProduct && (
-        <div className="bg-white border border-gray-100 rounded-xl p-6">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-black text-white text-xs flex items-center justify-center">
+        <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-6">
+          <h2 className="text-sm font-semibold text-gray-700 mb-5 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-black text-white text-xs flex items-center justify-center font-bold">
               2
             </span>
             Variantes
@@ -259,14 +372,12 @@ export default function NewProductPage() {
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-3 sm:col-span-1">
                 <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
-                  Nome da variante *
+                  Nome *
                 </label>
                 <input
                   type="text"
                   value={variantForm.name}
-                  onChange={(e) =>
-                    setVariantForm((f) => ({ ...f, name: e.target.value }))
-                  }
+                  onChange={(e) => setVariantForm((f) => ({ ...f, name: e.target.value }))}
                   placeholder="Ex: Preto M, 100ml"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
                 />
@@ -280,9 +391,7 @@ export default function NewProductPage() {
                   min="0"
                   step="0.01"
                   value={variantForm.price}
-                  onChange={(e) =>
-                    setVariantForm((f) => ({ ...f, price: e.target.value }))
-                  }
+                  onChange={(e) => setVariantForm((f) => ({ ...f, price: e.target.value }))}
                   placeholder="0,00"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
                 />
@@ -295,9 +404,7 @@ export default function NewProductPage() {
                   type="number"
                   min="0"
                   value={variantForm.stock}
-                  onChange={(e) =>
-                    setVariantForm((f) => ({ ...f, stock: e.target.value }))
-                  }
+                  onChange={(e) => setVariantForm((f) => ({ ...f, stock: e.target.value }))}
                   placeholder="0"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
                 />
