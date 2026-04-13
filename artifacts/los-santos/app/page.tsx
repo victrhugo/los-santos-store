@@ -1,11 +1,12 @@
 import { getProducts } from "@/services/products";
 import HomeClient from "@/components/HomeClient";
+import type { Product } from "@/types";
 
 export const revalidate = 60;
 
 export default async function HomePage() {
-  let products = [];
-  let error = null;
+  let products: Product[] = [];
+  let error: string | null = null;
 
   try {
     products = await getProducts();
