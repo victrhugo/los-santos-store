@@ -14,6 +14,8 @@ function formatPrice(value: number) {
 }
 
 export default function ProductCard({ product }: Props) {
+  const categoryName = product.categories?.name ?? null;
+
   return (
     <Link
       href={`/product/${product.id}`}
@@ -42,14 +44,12 @@ export default function ProductCard({ product }: Props) {
           </div>
         )}
 
-        {/* Category badge */}
-        {product.category && (
+        {categoryName && (
           <span className="absolute top-2.5 left-2.5 bg-black/70 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full">
-            {product.category}
+            {categoryName}
           </span>
         )}
 
-        {/* Quick view overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100">
           <span className="bg-white text-black text-xs font-semibold px-4 py-1.5 rounded-full shadow-lg translate-y-2 group-hover:translate-y-0 transition-transform duration-200">
             Ver produto

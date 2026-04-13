@@ -102,8 +102,8 @@ export default function EditProductPage() {
         </Link>
         <div>
           <h1 className="text-xl font-bold text-black">{product.name}</h1>
-          {product.category && (
-            <span className="text-xs text-gray-400">{product.category}</span>
+          {product.categories?.name && (
+            <span className="text-xs text-gray-400">{product.categories.name}</span>
           )}
         </div>
       </div>

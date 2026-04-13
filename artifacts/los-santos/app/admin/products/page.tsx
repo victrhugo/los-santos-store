@@ -108,9 +108,9 @@ export default function AdminProductsPage() {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900 truncate">{product.name}</p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  {product.category && (
+                  {product.categories?.name && (
                     <span className="inline-block bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full">
-                      {product.category}
+                      {product.categories.name}
                     </span>
                   )}
                   <span className="text-sm font-medium text-gray-700">

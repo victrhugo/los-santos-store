@@ -23,12 +23,13 @@ function filterProducts(
 ): Product[] {
   const q = query.trim().toLowerCase();
   return products.filter((p) => {
-    const matchesCategory = category === null || p.category === category;
+    const catName = p.categories?.name ?? "";
+    const matchesCategory = category === null || catName === category;
     const matchesQuery =
       q === "" ||
       p.name.toLowerCase().includes(q) ||
       (p.description ?? "").toLowerCase().includes(q) ||
-      (p.category ?? "").toLowerCase().includes(q);
+      catName.toLowerCase().includes(q);
     return matchesCategory && matchesQuery;
   });
 }
@@ -42,7 +43,9 @@ export default function HomeClient({ products }: Props) {
   const categories = useMemo(
     () =>
       Array.from(
-        new Set(products.map((p) => p.category).filter(Boolean) as string[])
+        new Set(
+          products.map((p) => p.categories?.name).filter(Boolean) as string[]
+        )
       ),
     [products]
   );
@@ -284,7 +287,7 @@ export default function HomeClient({ products }: Props) {
             <h2 className="text-xl font-bold text-black mb-6">Explorar por categoria</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {categories.map((cat) => {
-                const count = products.filter((p) => p.category === cat).length;
+                const count = products.filter((p) => p.categories?.name === cat).length;
                 return (
                   <button
                     key={cat}

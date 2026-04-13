@@ -4,22 +4,22 @@ import type { Product, ProductVariant } from "@/types";
 export async function getProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("*")
+    .select("*, categories(id, name)")
     .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as Product[];
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("*")
+    .select("*, categories(id, name)")
     .eq("id", id)
     .single();
 
   if (error) return null;
-  return data;
+  return data as Product;
 }
 
 export async function getProductVariants(productId: string): Promise<ProductVariant[]> {

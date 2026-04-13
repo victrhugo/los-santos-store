@@ -109,9 +109,9 @@ export default function ProductPage() {
         </div>
 
         <div className="flex flex-col">
-          {product.category && (
+          {product.categories?.name && (
             <span className="text-xs text-gray-500 uppercase tracking-widest mb-2">
-              {product.category}
+              {product.categories.name}
             </span>
           )}
 

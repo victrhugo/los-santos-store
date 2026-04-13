@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -9,9 +9,10 @@ import {
   adminCreateVariant,
   adminDeleteVariant,
   adminGetVariants,
+  getCategories,
   uploadProductImage,
 } from "@/services/admin";
-import type { Product, ProductVariant } from "@/types";
+import type { Category, Product, ProductVariant } from "@/types";
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -20,15 +21,14 @@ function formatPrice(value: number) {
   }).format(value);
 }
 
-const CATEGORIES = ["Roupas", "Acessórios", "Perfumes", "Outro"];
-
 export default function NewProductPage() {
   const router = useRouter();
 
+  const [categories, setCategories] = useState<Category[]>([]);
   const [productForm, setProductForm] = useState({
     name: "",
     description: "",
-    category: "",
+    category_id: "",
     price: "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -44,6 +44,12 @@ export default function NewProductPage() {
   const [variantError, setVariantError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    getCategories()
+      .then(setCategories)
+      .catch(() => {});
+  }, []);
 
   const handleFileSelect = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) return;
@@ -86,7 +92,7 @@ export default function NewProductPage() {
       const product = await adminCreateProduct({
         name: productForm.name.trim(),
         description: productForm.description.trim(),
-        category: productForm.category.trim(),
+        category_id: productForm.category_id,
         price: productForm.price ? parseFloat(productForm.price) : 0,
         image_url,
       });
@@ -147,12 +153,10 @@ export default function NewProductPage() {
         </div>
       </div>
 
-      {/* Step 1 - Product Info */}
+      {/* Step 1 */}
       <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-6 mb-4">
         <h2 className="text-sm font-semibold text-gray-700 mb-5 flex items-center gap-2">
-          <span className="w-5 h-5 rounded-full bg-black text-white text-xs flex items-center justify-center font-bold">
-            1
-          </span>
+          <span className="w-5 h-5 rounded-full bg-black text-white text-xs flex items-center justify-center font-bold">1</span>
           Informações do produto
         </h2>
 
@@ -172,28 +176,14 @@ export default function NewProductPage() {
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
                 Imagem do produto
               </label>
-
               {imagePreview ? (
                 <div className="relative w-full h-48 rounded-xl overflow-hidden border border-gray-200 group">
-                  <Image
-                    src={imagePreview}
-                    alt="Preview"
-                    fill
-                    className="object-cover"
-                  />
+                  <Image src={imagePreview} alt="Preview" fill className="object-cover" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="bg-white text-black text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                    >
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-white text-black text-xs font-medium px-3 py-1.5 rounded-lg">
                       Trocar imagem
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => { setImageFile(null); setImagePreview(null); }}
-                      className="bg-white text-red-500 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                    >
+                    <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); }} className="bg-white text-red-500 text-xs font-medium px-3 py-1.5 rounded-lg">
                       Remover
                     </button>
                   </div>
@@ -205,17 +195,10 @@ export default function NewProductPage() {
                   onDrop={onDrop}
                   onClick={() => fileInputRef.current?.click()}
                   className={`w-full h-40 rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${
-                    isDragging
-                      ? "border-black bg-gray-50"
-                      : "border-gray-200 hover:border-gray-400 hover:bg-gray-50"
+                    isDragging ? "border-black bg-gray-50" : "border-gray-200 hover:border-gray-400 hover:bg-gray-50"
                   }`}
                 >
-                  <svg
-                    className={`w-8 h-8 mb-2 transition-colors ${isDragging ? "text-black" : "text-gray-300"}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className={`w-8 h-8 mb-2 ${isDragging ? "text-black" : "text-gray-300"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <p className="text-sm text-gray-500 font-medium">
@@ -224,24 +207,12 @@ export default function NewProductPage() {
                   <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP até 5MB</p>
                 </div>
               )}
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleFileSelect(file);
-                }}
-              />
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }} />
             </div>
 
             {/* Name */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
-                Nome *
-              </label>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Nome *</label>
               <input
                 type="text"
                 value={productForm.name}
@@ -254,9 +225,7 @@ export default function NewProductPage() {
 
             {/* Description */}
             <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
-                Descrição
-              </label>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Descrição</label>
               <textarea
                 value={productForm.description}
                 onChange={(e) => setProductForm((f) => ({ ...f, description: e.target.value }))}
@@ -269,25 +238,21 @@ export default function NewProductPage() {
             {/* Category + Price */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
-                  Categoria
-                </label>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Categoria</label>
                 <select
-                  value={productForm.category}
-                  onChange={(e) => setProductForm((f) => ({ ...f, category: e.target.value }))}
+                  value={productForm.category_id}
+                  onChange={(e) => setProductForm((f) => ({ ...f, category_id: e.target.value }))}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors bg-white"
                 >
                   <option value="">Selecione...</option>
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
-                  Preço base (R$)
-                </label>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Preço base (R$)</label>
                 <input
                   type="number"
                   min="0"
@@ -301,9 +266,7 @@ export default function NewProductPage() {
             </div>
 
             {productError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
-                {productError}
-              </div>
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">{productError}</div>
             )}
 
             <button
@@ -333,32 +296,20 @@ export default function NewProductPage() {
       {savedProduct && (
         <div className="bg-white border border-gray-100 rounded-xl shadow-sm p-6">
           <h2 className="text-sm font-semibold text-gray-700 mb-5 flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-black text-white text-xs flex items-center justify-center font-bold">
-              2
-            </span>
+            <span className="w-5 h-5 rounded-full bg-black text-white text-xs flex items-center justify-center font-bold">2</span>
             Variantes
-            <span className="ml-auto text-xs text-gray-400 font-normal">
-              {variants.length} variante(s)
-            </span>
+            <span className="ml-auto text-xs text-gray-400 font-normal">{variants.length} variante(s)</span>
           </h2>
 
           {variants.length > 0 && (
             <div className="mb-5 space-y-2">
               {variants.map((v) => (
-                <div
-                  key={v.id}
-                  className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3"
-                >
+                <div key={v.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
                   <div>
                     <p className="text-sm font-medium text-gray-900">{v.name}</p>
-                    <p className="text-xs text-gray-500">
-                      {formatPrice(v.price)} · Estoque: {v.stock}
-                    </p>
+                    <p className="text-xs text-gray-500">{formatPrice(v.price)} · Estoque: {v.stock}</p>
                   </div>
-                  <button
-                    onClick={() => handleDeleteVariant(v.id)}
-                    className="text-gray-300 hover:text-red-500 transition-colors ml-3"
-                  >
+                  <button onClick={() => handleDeleteVariant(v.id)} className="text-gray-300 hover:text-red-500 transition-colors ml-3">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -371,69 +322,31 @@ export default function NewProductPage() {
           <form onSubmit={handleAddVariant} className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-3 sm:col-span-1">
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
-                  Nome *
-                </label>
-                <input
-                  type="text"
-                  value={variantForm.name}
-                  onChange={(e) => setVariantForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Ex: Preto M, 100ml"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
-                />
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Nome *</label>
+                <input type="text" value={variantForm.name} onChange={(e) => setVariantForm((f) => ({ ...f, name: e.target.value }))} placeholder="Ex: Preto M, 100ml" className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
-                  Preço (R$) *
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={variantForm.price}
-                  onChange={(e) => setVariantForm((f) => ({ ...f, price: e.target.value }))}
-                  placeholder="0,00"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
-                />
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Preço (R$) *</label>
+                <input type="number" min="0" step="0.01" value={variantForm.price} onChange={(e) => setVariantForm((f) => ({ ...f, price: e.target.value }))} placeholder="0,00" className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
-                  Estoque
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={variantForm.stock}
-                  onChange={(e) => setVariantForm((f) => ({ ...f, stock: e.target.value }))}
-                  placeholder="0"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
-                />
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Estoque</label>
+                <input type="number" min="0" value={variantForm.stock} onChange={(e) => setVariantForm((f) => ({ ...f, stock: e.target.value }))} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors" />
               </div>
             </div>
 
             {variantError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
-                {variantError}
-              </div>
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">{variantError}</div>
             )}
 
             <div className="flex items-center gap-3">
-              <button
-                type="submit"
-                disabled={variantLoading}
-                className="flex items-center gap-2 border border-black text-black text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-black hover:text-white transition-colors disabled:opacity-60"
-              >
+              <button type="submit" disabled={variantLoading} className="flex items-center gap-2 border border-black text-black text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-black hover:text-white transition-colors disabled:opacity-60">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 {variantLoading ? "Adicionando..." : "Adicionar variante"}
               </button>
-
-              <button
-                type="button"
-                onClick={() => router.push("/admin/products")}
-                className="bg-black text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-800 transition-colors"
-              >
+              <button type="button" onClick={() => router.push("/admin/products")} className="bg-black text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-gray-800 transition-colors">
                 Concluir
               </button>
             </div>

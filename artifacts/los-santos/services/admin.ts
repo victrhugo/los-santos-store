@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase-browser";
-import type { Product, ProductVariant } from "@/types";
+import type { Category, Product, ProductVariant } from "@/types";
 
 export interface AdminOrder {
   id: string;
@@ -15,7 +15,7 @@ export interface AdminOrder {
 export interface CreateProductInput {
   name: string;
   description: string;
-  category: string;
+  category_id: string;
   price?: number;
   image_url?: string;
 }
@@ -39,13 +39,22 @@ export async function uploadProductImage(file: File): Promise<string> {
   return data.publicUrl;
 }
 
+export async function getCategories(): Promise<Category[]> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, name")
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function adminGetProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("*")
+    .select("*, categories(id, name)")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return data ?? [];
+  return (data ?? []) as Product[];
 }
 
 export async function adminCreateProduct(
@@ -56,11 +65,11 @@ export async function adminCreateProduct(
     .insert({
       name: input.name,
       description: input.description || null,
-      category: input.category || null,
+      category_id: input.category_id || null,
       price: input.price ?? 0,
       image_url: input.image_url || null,
     })
-    .select()
+    .select("*, categories(id, name)")
     .single();
   if (error) throw new Error(error.message);
   return data as Product;
