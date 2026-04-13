@@ -2,7 +2,7 @@ import { getProducts, getCategoriesWithSeed } from "@/services/products";
 import HomeClient from "@/components/HomeClient";
 import type { Category, Product } from "@/types";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   let products: Product[] = [];

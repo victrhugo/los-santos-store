@@ -85,19 +85,34 @@ export async function getProducts(): Promise<Product[]> {
     .select("*, categories(id, name)")
     .order("created_at", { ascending: false });
 
+  console.log("[getProducts] count:", data?.length ?? 0, error ? `error: ${error.message}` : "ok");
+
   if (error) throw new Error(error.message);
   return (data ?? []) as Product[];
 }
 
-export async function getProductById(id: string): Promise<Product | null> {
+export async function getProductById(
+  id: string
+): Promise<{ product: Product | null; error: string | null }> {
+  console.log("[getProductById] id:", id);
+
   const { data, error } = await supabase
     .from("products")
     .select("*, categories(id, name)")
     .eq("id", id)
     .single();
 
-  if (error) return null;
-  return data as Product;
+  console.log("[getProductById] result:", data ? `found: ${data.name}` : "not found", error ? `error: ${error.message}` : "");
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      // PostgREST code for "0 rows" — product simply doesn't exist
+      return { product: null, error: null };
+    }
+    return { product: null, error: error.message };
+  }
+
+  return { product: data as Product, error: null };
 }
 
 export async function getProductVariants(productId: string): Promise<ProductVariant[]> {

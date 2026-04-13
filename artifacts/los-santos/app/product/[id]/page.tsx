@@ -24,15 +24,17 @@ export default function ProductPage() {
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
-        const [p, v] = await Promise.all([
+        const [{ product: p, error: prodError }, v] = await Promise.all([
           getProductById(id),
           getProductVariants(id),
         ]);
+        if (prodError) setLoadError(prodError);
         setProduct(p);
         setVariants(v);
         if (v.length > 0) setSelectedVariant(v[0]);
@@ -54,7 +56,14 @@ export default function ProductPage() {
   if (!product) {
     return (
       <div className="max-w-6xl mx-auto px-4 py-16 text-center">
-        <p className="text-gray-500 mb-4">Produto não encontrado.</p>
+        {loadError ? (
+          <>
+            <p className="text-red-500 font-medium mb-1">Erro ao carregar produto</p>
+            <p className="text-sm text-gray-400 mb-4">{loadError}</p>
+          </>
+        ) : (
+          <p className="text-gray-500 mb-4">Produto não encontrado.</p>
+        )}
         <Link href="/" className="text-sm underline">
           Voltar para a loja
         </Link>

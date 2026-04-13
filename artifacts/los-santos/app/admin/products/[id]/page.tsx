@@ -23,6 +23,7 @@ export default function EditProductPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [variantForm, setVariantForm] = useState({
     name: "",
@@ -33,8 +34,13 @@ export default function EditProductPage() {
   const [variantError, setVariantError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("[EditProductPage] id:", id);
     Promise.all([getProductById(id), adminGetVariants(id)])
-      .then(([p, v]) => {
+      .then(([{ product: p, error: prodError }, v]) => {
+        if (prodError) {
+          console.error("[EditProductPage] fetch error:", prodError);
+          setLoadError(prodError);
+        }
         setProduct(p);
         setVariants(v);
       })
@@ -81,9 +87,16 @@ export default function EditProductPage() {
   if (!product) {
     return (
       <div className="text-center py-16">
-        <p className="text-gray-500">Produto não encontrado.</p>
-        <Link href="/admin/products" className="text-sm underline mt-2 inline-block">
-          Voltar
+        {loadError ? (
+          <>
+            <p className="text-red-500 font-medium mb-1">Erro ao carregar produto</p>
+            <p className="text-sm text-gray-400 mb-4">{loadError}</p>
+          </>
+        ) : (
+          <p className="text-gray-500 mb-4">Produto não encontrado.</p>
+        )}
+        <Link href="/admin/products" className="text-sm underline inline-block">
+          Voltar para produtos
         </Link>
       </div>
     );
