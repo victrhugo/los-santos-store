@@ -1,0 +1,18 @@
+kind = "web"
+previewPath = "/"
+title = "Los Santos"
+version = "1.0.0"
+
+[[services]]
+localPort = 3000
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/los-santos run dev"
+
+[services.production]
+serve = "static"
+
+[services.production.build]
+args = ["pnpm", "--filter", "@workspace/los-santos", "run", "build"]
