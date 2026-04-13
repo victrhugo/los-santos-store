@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
 import type { Product } from "@/types";
@@ -16,24 +16,58 @@ interface Props {
   products: Product[];
 }
 
+function filterProducts(
+  products: Product[],
+  query: string,
+  category: string | null
+): Product[] {
+  const q = query.trim().toLowerCase();
+  return products.filter((p) => {
+    const matchesCategory = category === null || p.category === category;
+    const matchesQuery =
+      q === "" ||
+      p.name.toLowerCase().includes(q) ||
+      (p.description ?? "").toLowerCase().includes(q) ||
+      (p.category ?? "").toLowerCase().includes(q);
+    return matchesCategory && matchesQuery;
+  });
+}
+
 export default function HomeClient({ products }: Props) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const productsRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  const categories = Array.from(
-    new Set(products.map((p) => p.category).filter(Boolean) as string[])
+  const categories = useMemo(
+    () =>
+      Array.from(
+        new Set(products.map((p) => p.category).filter(Boolean) as string[])
+      ),
+    [products]
   );
 
-  const filtered =
-    activeCategory === null
-      ? products
-      : products.filter((p) => p.category === activeCategory);
+  const filtered = useMemo(
+    () => filterProducts(products, searchQuery, activeCategory),
+    [products, searchQuery, activeCategory]
+  );
+
+  const hasActiveFilters = searchQuery.trim() !== "" || activeCategory !== null;
 
   function handleCategoryClick(cat: string | null) {
     setActiveCategory(cat);
     setTimeout(() => {
       productsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 50);
+  }
+
+  function clearAllFilters() {
+    setSearchQuery("");
+    setActiveCategory(null);
+  }
+
+  function scrollToProducts() {
+    productsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   return (
@@ -47,7 +81,7 @@ export default function HomeClient({ products }: Props) {
               "radial-gradient(ellipse at 70% 50%, #ffffff 0%, transparent 60%)",
           }}
         />
-        <div className="relative max-w-6xl mx-auto px-4 py-24 sm:py-32 flex flex-col items-start">
+        <div className="relative max-w-6xl mx-auto px-4 py-20 sm:py-28 flex flex-col items-start">
           <span className="inline-block bg-white/10 text-white text-xs font-semibold tracking-widest uppercase px-3 py-1 rounded-full mb-5 border border-white/20">
             Nova coleção
           </span>
@@ -56,113 +90,183 @@ export default function HomeClient({ products }: Props) {
             <br />
             <span className="text-gray-300">Los Santos</span>
           </h1>
-          <p className="mt-5 text-gray-400 text-base sm:text-lg max-w-md leading-relaxed">
+          <p className="mt-4 text-gray-400 text-base sm:text-lg max-w-md leading-relaxed">
             Roupas, acessórios e perfumes com estilo. Encontre peças únicas para o seu look.
           </p>
-          <div className="mt-8 flex items-center gap-3">
-            <a
-              href="#produtos"
-              onClick={(e) => {
-                e.preventDefault();
-                productsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
+          <div className="mt-8 flex items-center gap-3 flex-wrap">
+            <button
+              onClick={scrollToProducts}
               className="inline-flex items-center gap-2 bg-white text-black font-semibold text-sm px-6 py-3 rounded-full hover:bg-gray-100 transition-colors"
             >
               Ver produtos
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
-            </a>
-            {categories.length > 0 && (
-              <a
-                href="#categorias"
-                onClick={(e) => {
-                  e.preventDefault();
-                  productsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-                }}
-                className="inline-flex items-center gap-2 border border-white/30 text-white font-medium text-sm px-6 py-3 rounded-full hover:bg-white/10 transition-colors"
-              >
-                Ver categorias
-              </a>
-            )}
+            </button>
+            <button
+              onClick={() => {
+                scrollToProducts();
+                setTimeout(() => searchRef.current?.focus(), 400);
+              }}
+              className="inline-flex items-center gap-2 border border-white/30 text-white font-medium text-sm px-6 py-3 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              Buscar produto
+            </button>
           </div>
         </div>
       </section>
 
-      {/* Categories */}
-      {categories.length > 0 && (
-        <section id="categorias" className="bg-white border-b border-gray-100">
-          <div className="max-w-6xl mx-auto px-4 py-6">
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
+      {/* Search + Filters bar */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-100 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row gap-3">
+          {/* Search input */}
+          <div className="relative flex-1">
+            <svg
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              ref={searchRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar produto por nome..."
+              className="w-full pl-10 pr-10 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-black transition-colors bg-gray-50 focus:bg-white"
+            />
+            {searchQuery && (
               <button
-                onClick={() => handleCategoryClick(null)}
-                className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  activeCategory === null
-                    ? "bg-black text-white shadow-sm"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Category pills */}
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            <button
+              onClick={() => setActiveCategory(null)}
+              className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                activeCategory === null
+                  ? "bg-black text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Todos
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                  activeCategory === cat
+                    ? "bg-black text-white"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                Todos
-                <span className="text-xs opacity-70">({products.length})</span>
+                <span className="text-base leading-none">{CATEGORY_ICONS[cat] ?? "🏷️"}</span>
+                {cat}
               </button>
-              {categories.map((cat) => {
-                const count = products.filter((p) => p.category === cat).length;
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => handleCategoryClick(cat)}
-                    className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                      activeCategory === cat
-                        ? "bg-black text-white shadow-sm"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    <span>{CATEGORY_ICONS[cat] ?? "🏷️"}</span>
-                    {cat}
-                    <span className="text-xs opacity-70">({count})</span>
-                  </button>
-                );
-              })}
-            </div>
+            ))}
           </div>
-        </section>
-      )}
+        </div>
+      </div>
 
       {/* Products section */}
       <section
         id="produtos"
         ref={productsRef}
-        className="max-w-6xl mx-auto px-4 py-12"
+        className="max-w-6xl mx-auto px-4 py-10"
       >
-        <div className="flex items-end justify-between mb-7">
+        {/* Header row */}
+        <div className="flex items-end justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-black tracking-tight">
-              {activeCategory ? activeCategory : "Produtos em destaque"}
+              {searchQuery.trim()
+                ? `Resultados para "${searchQuery.trim()}"`
+                : activeCategory
+                ? activeCategory
+                : "Produtos em destaque"}
             </h2>
             <p className="text-sm text-gray-500 mt-1">
-              {filtered.length} produto{filtered.length !== 1 ? "s" : ""} disponível
-              {filtered.length !== 1 ? "is" : ""}
+              {filtered.length} produto{filtered.length !== 1 ? "s" : ""}{" "}
+              encontrado{filtered.length !== 1 ? "s" : ""}
             </p>
           </div>
-          {activeCategory && (
+          {hasActiveFilters && (
             <button
-              onClick={() => setActiveCategory(null)}
-              className="text-xs text-gray-400 hover:text-black transition-colors flex items-center gap-1"
+              onClick={clearAllFilters}
+              className="text-xs text-gray-400 hover:text-black transition-colors flex items-center gap-1.5 border border-gray-200 hover:border-gray-400 px-3 py-1.5 rounded-lg"
             >
-              Limpar filtro
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
+              Limpar filtros
             </button>
           )}
         </div>
 
+        {/* Active filter tags */}
+        {hasActiveFilters && (
+          <div className="flex items-center gap-2 mb-6 flex-wrap">
+            {searchQuery.trim() && (
+              <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                "{searchQuery.trim()}"
+                <button onClick={() => setSearchQuery("")} className="ml-1 hover:text-black">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+            {activeCategory && (
+              <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full">
+                {CATEGORY_ICONS[activeCategory] ?? "🏷️"} {activeCategory}
+                <button onClick={() => setActiveCategory(null)} className="ml-1 hover:text-black">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Grid or empty state */}
         {filtered.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            <p className="text-lg font-medium">Nenhum produto encontrado</p>
-            <p className="text-sm mt-1">
-              Os produtos aparecerão aqui quando forem cadastrados.
+          <div className="text-center py-24">
+            <div className="text-gray-200 mb-4">
+              <svg className="w-14 h-14 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <p className="text-gray-600 font-semibold text-lg">Nenhum produto encontrado</p>
+            <p className="text-gray-400 text-sm mt-1 mb-5">
+              {hasActiveFilters
+                ? "Tente outros termos ou remova os filtros ativos."
+                : "Os produtos aparecerão aqui quando forem cadastrados."}
             </p>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="inline-flex items-center gap-2 bg-black text-white text-sm font-medium px-5 py-2.5 rounded-full hover:bg-gray-800 transition-colors"
+              >
+                Limpar filtros
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
@@ -173,8 +277,8 @@ export default function HomeClient({ products }: Props) {
         )}
       </section>
 
-      {/* Footer categories cards */}
-      {categories.length > 0 && (
+      {/* Category cards */}
+      {categories.length > 0 && !hasActiveFilters && (
         <section className="bg-gray-50 border-t border-gray-100 py-12">
           <div className="max-w-6xl mx-auto px-4">
             <h2 className="text-xl font-bold text-black mb-6">Explorar por categoria</h2>
@@ -184,9 +288,7 @@ export default function HomeClient({ products }: Props) {
                 return (
                   <button
                     key={cat}
-                    onClick={() => {
-                      handleCategoryClick(cat);
-                    }}
+                    onClick={() => handleCategoryClick(cat)}
                     className="group bg-white border border-gray-200 rounded-2xl p-5 text-left hover:border-black hover:shadow-md transition-all"
                   >
                     <div className="text-2xl mb-3">{CATEGORY_ICONS[cat] ?? "🏷️"}</div>
