@@ -15,24 +15,23 @@ function formatPrice(value: number) {
 
 export default function ProductCard({ product }: Props) {
   return (
-    <div className="group bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-md transition-shadow duration-200">
-      <div className="aspect-square bg-gray-50 relative overflow-hidden">
+    <Link
+      href={`/product/${product.id}`}
+      className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-200"
+    >
+      {/* Image */}
+      <div className="relative aspect-square bg-gray-50 overflow-hidden">
         {product.image_url ? (
           <Image
             src={product.image_url}
             alt={product.name}
             fill
-            className="object-cover group-hover:scale-105 transition-transform duration-300"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-500"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-300">
-            <svg
-              className="w-16 h-16"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+          <div className="w-full h-full flex items-center justify-center text-gray-200">
+            <svg className="w-14 h-14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -42,28 +41,31 @@ export default function ProductCard({ product }: Props) {
             </svg>
           </div>
         )}
+
+        {/* Category badge */}
         {product.category && (
-          <span className="absolute top-2 left-2 bg-white text-xs font-medium px-2 py-1 rounded text-gray-600 border border-gray-100">
+          <span className="absolute top-2.5 left-2.5 bg-black/70 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full">
             {product.category}
           </span>
         )}
+
+        {/* Quick view overlay */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100">
+          <span className="bg-white text-black text-xs font-semibold px-4 py-1.5 rounded-full shadow-lg translate-y-2 group-hover:translate-y-0 transition-transform duration-200">
+            Ver produto
+          </span>
+        </div>
       </div>
 
-      <div className="p-4">
-        <h3 className="font-medium text-gray-900 text-sm leading-snug mb-1 line-clamp-2">
+      {/* Info */}
+      <div className="p-3.5 flex flex-col gap-1 flex-1">
+        <h3 className="font-medium text-gray-900 text-sm leading-snug line-clamp-2">
           {product.name}
         </h3>
-        <p className="text-base font-bold text-black mb-3">
+        <p className="text-base font-bold text-black mt-auto pt-1">
           {formatPrice(product.price)}
         </p>
-
-        <Link
-          href={`/product/${product.id}`}
-          className="block w-full text-center text-sm font-medium py-2 px-4 border border-black rounded hover:bg-black hover:text-white transition-colors duration-150"
-        >
-          Ver produto
-        </Link>
       </div>
-    </div>
+    </Link>
   );
 }
