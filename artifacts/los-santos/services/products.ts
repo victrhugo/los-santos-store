@@ -3,6 +3,28 @@ import type { Category, Product, ProductVariant } from "@/types";
 
 const DEFAULT_CATEGORIES = ["Roupas", "Óculos", "Perfumes", "Acessórios"];
 
+/** Remove duplicate rows from DB keeping only the first ID per name. */
+async function removeDuplicatesFromDB(all: Category[]): Promise<Category[]> {
+  const seen = new Map<string, Category>();
+  const duplicateIds: string[] = [];
+
+  for (const cat of all) {
+    const key = cat.name.toLowerCase();
+    if (seen.has(key)) {
+      duplicateIds.push(cat.id);
+    } else {
+      seen.set(key, cat);
+    }
+  }
+
+  if (duplicateIds.length > 0) {
+    console.log("[categories] removing duplicate IDs from DB:", duplicateIds);
+    await supabase.from("categories").delete().in("id", duplicateIds);
+  }
+
+  return Array.from(seen.values());
+}
+
 export async function getCategoriesWithSeed(): Promise<Category[]> {
   try {
     const { data, error } = await supabase
@@ -12,24 +34,36 @@ export async function getCategoriesWithSeed(): Promise<Category[]> {
 
     if (error) throw new Error(error.message);
 
-    console.log("[categories] fetched from DB:", data);
+    const all = (data ?? []) as Category[];
+    console.log("[categories] fetched from DB:", all);
 
-    if (data && data.length > 0) {
-      // Deduplicate by name (keep first occurrence of each name)
-      const seen = new Set<string>();
-      const unique = (data as Category[]).filter((c) => {
-        if (seen.has(c.name)) return false;
-        seen.add(c.name);
-        return true;
-      });
-      return unique;
+    if (all.length > 0) {
+      // Clean any duplicates left in the DB, then return unique list
+      return await removeDuplicatesFromDB(all);
     }
 
-    // Table is empty — seed default categories
+    // Table is empty — seed only the missing default categories
     console.log("[categories] table is empty, seeding defaults...");
+    const { data: existing } = await supabase
+      .from("categories")
+      .select("name");
+
+    const existingNames = new Set(
+      (existing ?? []).map((c: { name: string }) => c.name.toLowerCase())
+    );
+
+    const toInsert = DEFAULT_CATEGORIES.filter(
+      (name) => !existingNames.has(name.toLowerCase())
+    );
+
+    if (toInsert.length === 0) {
+      console.log("[categories] all defaults already exist, skipping seed");
+      return all;
+    }
+
     const { data: inserted, error: insertError } = await supabase
       .from("categories")
-      .insert(DEFAULT_CATEGORIES.map((name) => ({ name })))
+      .insert(toInsert.map((name) => ({ name })))
       .select("id, name");
 
     if (insertError) {

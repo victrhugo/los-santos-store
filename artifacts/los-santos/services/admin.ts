@@ -45,7 +45,15 @@ export async function getCategories(): Promise<Category[]> {
     .select("id, name")
     .order("name", { ascending: true });
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  // Deduplicate by name (case-insensitive) — keep first occurrence
+  const seen = new Set<string>();
+  return (data ?? []).filter((c) => {
+    const key = c.name.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }) as Category[];
 }
 
 export async function adminGetProducts(): Promise<Product[]> {
