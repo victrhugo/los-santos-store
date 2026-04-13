@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase-browser";
-import type { Category, Product, ProductVariant } from "@/types";
+import type { Category, Product, ProductImage, ProductVariant } from "@/types";
 
 export interface AdminOrder {
   id: string;
@@ -127,6 +127,54 @@ export async function adminGetOrders(): Promise<AdminOrder[]> {
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export async function adminGetProductImages(
+  productId: string
+): Promise<ProductImage[]> {
+  const { data, error } = await supabase
+    .from("product_images")
+    .select("*")
+    .eq("product_id", productId)
+    .order("created_at", { ascending: true });
+  if (error) {
+    // Table may not exist yet
+    if (error.code === "42P01") return [];
+    throw new Error(error.message);
+  }
+  return data ?? [];
+}
+
+export async function adminAddProductImages(
+  productId: string,
+  urls: string[]
+): Promise<ProductImage[]> {
+  if (urls.length === 0) return [];
+  const { data, error } = await supabase
+    .from("product_images")
+    .insert(urls.map((image_url) => ({ product_id: productId, image_url })))
+    .select();
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function adminDeleteProductImage(imageId: string): Promise<void> {
+  const { error } = await supabase
+    .from("product_images")
+    .delete()
+    .eq("id", imageId);
+  if (error) throw new Error(error.message);
+}
+
+export async function adminUpdateProductPrimaryImage(
+  productId: string,
+  imageUrl: string | null
+): Promise<void> {
+  const { error } = await supabase
+    .from("products")
+    .update({ image_url: imageUrl })
+    .eq("id", productId);
+  if (error) throw new Error(error.message);
 }
 
 export async function adminUpdateOrderStatus(

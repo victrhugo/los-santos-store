@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { Category, Product, ProductVariant } from "@/types";
+import type { Category, Product, ProductImage, ProductVariant } from "@/types";
 
 const DEFAULT_CATEGORIES = ["Roupas", "Óculos", "Perfumes", "Acessórios"];
 
@@ -121,6 +121,19 @@ export async function getProductById(
   }
 
   return { product: data as Product, error: null };
+}
+
+export async function getProductImages(productId: string): Promise<ProductImage[]> {
+  const { data, error } = await supabase
+    .from("product_images")
+    .select("*")
+    .eq("product_id", productId)
+    .order("created_at", { ascending: true });
+  if (error) {
+    if (error.code === "42P01") return []; // table doesn't exist yet
+    throw new Error(error.message);
+  }
+  return data ?? [];
 }
 
 export async function getProductVariants(productId: string): Promise<ProductVariant[]> {

@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
-import { getProductById, getProductVariants } from "@/services/products";
+import { getProductById, getProductVariants, getProductImages } from "@/services/products";
 import { useCart } from "@/components/CartContext";
+import { ImageGallery } from "@/components/ImageGallery";
 import type { Product, ProductVariant } from "@/types";
 
 function formatPrice(value: number) {
@@ -36,6 +36,7 @@ export default function ProductPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
@@ -43,18 +44,28 @@ export default function ProductPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [{ product: p, error: prodError }, v] = await Promise.all([
+        const [{ product: p, error: prodError }, v, imgs] = await Promise.all([
           getProductById(id),
           getProductVariants(id),
+          getProductImages(id ?? ""),
         ]);
         if (prodError) setLoadError(prodError);
         setProduct(p);
         setVariants(v);
+
         if (v.length > 0) {
           setSelectedVariant(v[0]);
         } else if (p) {
-          // No real variants — use the product itself as a synthetic variant
           setSelectedVariant(syntheticVariant(p));
+        }
+
+        // Build image list: primary first, then additional
+        if (p) {
+          const extraUrls = imgs.map((i) => i.image_url);
+          const allUrls = p.image_url
+            ? [p.image_url, ...extraUrls.filter((u) => u !== p.image_url)]
+            : extraUrls;
+          setGalleryImages(allUrls);
         }
       } finally {
         setLoading(false);
@@ -120,30 +131,8 @@ export default function ProductPage() {
       </Link>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-        {/* Image */}
-        <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden relative">
-          {product.image_url ? (
-            <Image
-              src={product.image_url}
-              alt={product.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-300">
-              <svg className="w-24 h-24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1}
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-          )}
-        </div>
+        {/* Image gallery */}
+        <ImageGallery images={galleryImages} alt={product.name} priority />
 
         {/* Info */}
         <div className="flex flex-col">
@@ -165,7 +154,7 @@ export default function ProductPage() {
             </p>
           )}
 
-          {/* Variants selector — only shown when real variants exist */}
+          {/* Variants selector */}
           {hasRealVariants && (
             <div className="mb-6">
               <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
@@ -207,7 +196,7 @@ export default function ProductPage() {
             </div>
           )}
 
-          {/* No-variant availability badge */}
+          {/* No-variant badge */}
           {!hasRealVariants && (
             <div className="inline-flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full mb-6 w-fit">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500" />

@@ -23,6 +23,13 @@ export interface ProductVariant {
   created_at: string;
 }
 
+export interface ProductImage {
+  id: string;
+  product_id: string;
+  image_url: string;
+  created_at: string;
+}
+
 export interface CartItem {
   product: Product;
   variant: ProductVariant;

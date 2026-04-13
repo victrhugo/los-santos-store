@@ -1,17 +1,18 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import {
   adminCreateProduct,
   adminCreateVariant,
   adminDeleteVariant,
   adminGetVariants,
+  adminAddProductImages,
   getCategories,
   uploadProductImage,
 } from "@/services/admin";
+import { MultiImageUpload, type ImageEntry } from "@/components/MultiImageUpload";
 import type { Category, Product, ProductVariant } from "@/types";
 
 function formatPrice(value: number) {
@@ -31,9 +32,7 @@ export default function NewProductPage() {
     category_id: "",
     price: "",
   });
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [imageEntries, setImageEntries] = useState<ImageEntry[]>([]);
   const [productLoading, setProductLoading] = useState(false);
   const [productError, setProductError] = useState<string | null>(null);
   const [savedProduct, setSavedProduct] = useState<Product | null>(null);
@@ -43,38 +42,28 @@ export default function NewProductPage() {
   const [variantLoading, setVariantLoading] = useState(false);
   const [variantError, setVariantError] = useState<string | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
     getCategories()
       .then(setCategories)
       .catch(() => {});
   }, []);
 
-  const handleFileSelect = useCallback((file: File) => {
-    if (!file.type.startsWith("image/")) return;
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onload = (e) => setImagePreview(e.target?.result as string);
-    reader.readAsDataURL(file);
+  const handleAddFiles = useCallback((files: File[]) => {
+    const newEntries: ImageEntry[] = files.map((file) => ({
+      key: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      preview: URL.createObjectURL(file),
+      file,
+    }));
+    setImageEntries((prev) => [...prev, ...newEntries]);
   }, []);
 
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
+  const handleRemove = useCallback((key: string) => {
+    setImageEntries((prev) => {
+      const entry = prev.find((e) => e.key === key);
+      if (entry?.preview.startsWith("blob:")) URL.revokeObjectURL(entry.preview);
+      return prev.filter((e) => e.key !== key);
+    });
   }, []);
-
-  const onDragLeave = useCallback(() => setIsDragging(false), []);
-
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setIsDragging(false);
-      const file = e.dataTransfer.files[0];
-      if (file) handleFileSelect(file);
-    },
-    [handleFileSelect]
-  );
 
   async function handleSaveProduct(e: React.FormEvent) {
     e.preventDefault();
@@ -85,17 +74,27 @@ export default function NewProductPage() {
     setProductLoading(true);
     setProductError(null);
     try {
-      let image_url: string | undefined;
-      if (imageFile) {
-        image_url = await uploadProductImage(imageFile);
-      }
+      // Upload all images in parallel
+      const filesToUpload = imageEntries.filter((e) => !!e.file).map((e) => e.file!);
+      const uploadedUrls = await Promise.all(filesToUpload.map((f) => uploadProductImage(f)));
+
+      // First URL = primary image_url; rest go to product_images
+      const primaryUrl = uploadedUrls[0] ?? undefined;
+      const extraUrls = uploadedUrls.slice(1);
+
       const product = await adminCreateProduct({
         name: productForm.name.trim(),
         description: productForm.description.trim(),
         category_id: productForm.category_id,
         price: productForm.price ? parseFloat(productForm.price) : 0,
-        image_url,
+        image_url: primaryUrl,
       });
+
+      // Save extra images to product_images table
+      if (extraUrls.length > 0) {
+        await adminAddProductImages(product.id, extraUrls).catch(() => {});
+      }
+
       setSavedProduct(product);
       const existing = await adminGetVariants(product.id);
       setVariants(existing);
@@ -171,43 +170,22 @@ export default function NewProductPage() {
           </div>
         ) : (
           <form onSubmit={handleSaveProduct} className="space-y-5">
-            {/* Image Upload */}
+            {/* Multi-image upload */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
-                Imagem do produto
+                Imagens do produto
+                {imageEntries.length > 0 && (
+                  <span className="ml-2 font-normal text-gray-400 normal-case">
+                    ({imageEntries.length} selecionada{imageEntries.length > 1 ? "s" : ""} · 1ª será a capa)
+                  </span>
+                )}
               </label>
-              {imagePreview ? (
-                <div className="relative w-full h-48 rounded-xl overflow-hidden border border-gray-200 group">
-                  <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="bg-white text-black text-xs font-medium px-3 py-1.5 rounded-lg">
-                      Trocar imagem
-                    </button>
-                    <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); }} className="bg-white text-red-500 text-xs font-medium px-3 py-1.5 rounded-lg">
-                      Remover
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  onDragOver={onDragOver}
-                  onDragLeave={onDragLeave}
-                  onDrop={onDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`w-full h-40 rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${
-                    isDragging ? "border-black bg-gray-50" : "border-gray-200 hover:border-gray-400 hover:bg-gray-50"
-                  }`}
-                >
-                  <svg className={`w-8 h-8 mb-2 ${isDragging ? "text-black" : "text-gray-300"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <p className="text-sm text-gray-500 font-medium">
-                    {isDragging ? "Solte a imagem aqui" : "Arraste ou clique para fazer upload"}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">PNG, JPG, WEBP até 5MB</p>
-                </div>
-              )}
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }} />
+              <MultiImageUpload
+                entries={imageEntries}
+                onAddFiles={handleAddFiles}
+                onRemove={handleRemove}
+                disabled={productLoading}
+              />
             </div>
 
             {/* Name */}
@@ -277,7 +255,7 @@ export default function NewProductPage() {
               {productLoading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {imageFile ? "Enviando imagem..." : "Salvando..."}
+                  {imageEntries.length > 0 ? "Enviando imagens..." : "Salvando..."}
                 </>
               ) : (
                 <>
