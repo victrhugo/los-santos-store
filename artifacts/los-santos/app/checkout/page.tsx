@@ -59,8 +59,11 @@ export default function CheckoutPage() {
         },
         items.map((item) => ({
           product_id: item.product.id,
+          product_name: item.product.name,
           variant_id:
             item.variant.id === item.product.id ? null : item.variant.id,
+          variant_name:
+            item.variant.id === item.product.id ? null : item.variant.name,
           quantity: item.quantity,
           price: item.variant.price,
         }))

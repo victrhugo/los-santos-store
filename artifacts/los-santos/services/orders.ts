@@ -1,35 +1,126 @@
 import { supabase } from "@/lib/supabase";
 import type { Order, OrderItem } from "@/types";
 
-function isMissingProductIdSchemaError(error: unknown): boolean {
+function getMissingSchemaColumn(error: unknown): string | null {
   const err = error as { message?: string; code?: string };
   const raw = (err.message ?? "").trim();
-  return (
-    err.code === "PGRST204" ||
-    /could not find the 'product_id' column of 'order_items' in the schema cache/i.test(raw)
-  );
+
+  if (err.code !== "PGRST204") return null;
+
+  const match = raw.match(/could not find the '([^']+)' column/i);
+  return match?.[1] ?? null;
 }
 
 async function insertOrderItems(
-  orderItems: Array<{
+  originalOrderItems: Array<{
     order_id: string;
     product_id: string;
+    product_name?: string;
     variant_id: string | null;
+    variant_name?: string | null;
     quantity: number;
     price: number;
   }>
 ) {
-  const firstAttempt = await supabase.from("order_items").insert(orderItems);
+  let orderItems = [...originalOrderItems];
 
-  if (!firstAttempt.error || !isMissingProductIdSchemaError(firstAttempt.error)) {
-    return firstAttempt;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const result = await supabase.from("order_items").insert(orderItems);
+    if (!result.error) return result;
+
+    const missingColumn = getMissingSchemaColumn(result.error);
+    if (!missingColumn) return result;
+
+    orderItems = orderItems.map((item) => {
+      const next = { ...item } as Record<string, unknown>;
+      delete next[missingColumn];
+      return next as typeof orderItems[number];
+    });
   }
 
-  // Compatibilidade com bancos antigos em que `order_items.product_id`
-  // ainda não existe no schema cache / tabela.
-  return await supabase.from("order_items").insert(
-    orderItems.map(({ product_id: _productId, ...legacyItem }) => legacyItem)
+  return await supabase.from("order_items").insert(orderItems);
+}
+
+async function prepareStockUpdates(items: Omit<OrderItem, "order_id">[]) {
+  const variantIds = Array.from(
+    new Set(items.map((item) => item.variant_id).filter((id): id is string => Boolean(id)))
   );
+
+  if (variantIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("product_variants")
+    .select("id, stock")
+    .in("id", variantIds);
+
+  if (error) {
+    throw new Error("Não foi possível verificar o estoque antes de finalizar o pedido.");
+  }
+
+  const stockByVariantId = new Map(
+    (data ?? []).map((row) => [row.id as string, Number(row.stock ?? 0)])
+  );
+
+  const quantityByVariantId = new Map<string, number>();
+  for (const item of items) {
+    if (!item.variant_id) continue;
+    quantityByVariantId.set(
+      item.variant_id,
+      (quantityByVariantId.get(item.variant_id) ?? 0) + item.quantity
+    );
+  }
+
+  return Array.from(quantityByVariantId.entries()).map(([variantId, quantity]) => {
+    const currentStock = stockByVariantId.get(variantId);
+
+    if (currentStock === undefined) {
+      throw new Error("Uma variação do carrinho não foi encontrada. Atualize a página e tente de novo.");
+    }
+
+    if (currentStock < quantity) {
+      throw new Error("Uma variação do carrinho não tem estoque suficiente para esse pedido.");
+    }
+
+    return {
+      variantId,
+      currentStock,
+      nextStock: currentStock - quantity,
+    };
+  });
+}
+
+async function applyStockUpdates(
+  updates: Array<{ variantId: string; currentStock: number; nextStock: number }>
+) {
+  const applied: Array<{ variantId: string; previousStock: number }> = [];
+
+  try {
+    for (const update of updates) {
+      const { data, error } = await supabase
+        .from("product_variants")
+        .update({ stock: update.nextStock })
+        .eq("id", update.variantId)
+        .eq("stock", update.currentStock)
+        .select("id")
+        .maybeSingle();
+
+      if (error || !data) {
+        throw new Error("O estoque mudou enquanto o pedido era finalizado. Atualize a página e tente novamente.");
+      }
+
+      applied.push({ variantId: update.variantId, previousStock: update.currentStock });
+    }
+  } catch (error) {
+    await Promise.all(
+      applied.map((item) =>
+        supabase
+          .from("product_variants")
+          .update({ stock: item.previousStock })
+          .eq("id", item.variantId)
+      )
+    );
+    throw error;
+  }
 }
 
 /** Mensagem legível para o usuário (checkout / UI). */
@@ -71,6 +162,8 @@ export async function createOrder(
     throw new Error("Seu carrinho está vazio.");
   }
 
+  const stockUpdates = await prepareStockUpdates(items);
+
   const { data: orderData, error: orderError } = await supabase
     .from("orders")
     .insert({
@@ -98,10 +191,18 @@ export async function createOrder(
       item.variant_id !== null && item.variant_id === item.product_id
         ? null
         : item.variant_id;
+
+    const variantName =
+      variantId === null || item.variant_name === "Padrão"
+        ? null
+        : item.variant_name ?? null;
+
     return {
       order_id: orderId,
       product_id: item.product_id,
+      product_name: item.product_name?.trim() || null,
       variant_id: variantId,
+      variant_name: variantName,
       quantity: item.quantity,
       price: item.price,
     };
@@ -112,6 +213,13 @@ export async function createOrder(
   if (itemsError) {
     await supabase.from("orders").delete().eq("id", orderId);
     throw new Error(formatOrderError(itemsError));
+  }
+
+  try {
+    await applyStockUpdates(stockUpdates);
+  } catch (error) {
+    await supabase.from("orders").delete().eq("id", orderId);
+    throw error;
   }
 
   return orderId;

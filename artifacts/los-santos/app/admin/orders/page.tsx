@@ -6,7 +6,7 @@ import {
   adminGetOrders,
   adminUpdateOrderStatus,
 } from "@/services/admin";
-import type { AdminOrder } from "@/services/admin";
+import type { AdminOrder, AdminOrderItem } from "@/services/admin";
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -23,6 +23,17 @@ function formatDate(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatWhatsApp(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  return digits ? `https://wa.me/${digits}` : null;
+}
+
+function formatOrderItemLabel(item: AdminOrderItem) {
+  const product = item.product_name?.trim() || "Produto";
+  const variant = item.variant_name?.trim();
+  return variant ? `${product} · ${variant}` : product;
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
@@ -142,9 +153,9 @@ export default function AdminOrdersPage() {
                 key={order.id}
                 className="bg-white border border-gray-100 rounded-xl p-5"
               >
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+                  <div className="flex-1 min-w-0 space-y-3">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-sm text-gray-900">
                         {order.customer_name}
                       </span>
@@ -155,15 +166,36 @@ export default function AdminOrdersPage() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-4 text-xs text-gray-400 flex-wrap">
-                      <span>{order.customer_phone}</span>
-                      <span>
-                        {DELIVERY_LABELS[order.delivery_type] ?? order.delivery_type}
-                      </span>
-                      <span>{formatDate(order.created_at)}</span>
-                      <span className="font-medium text-gray-700">
-                        {formatPrice(order.total)}
-                      </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <div className="rounded-lg bg-gray-50 px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wide text-gray-400">Contato</p>
+                        {formatWhatsApp(order.customer_phone) ? (
+                          <a
+                            href={formatWhatsApp(order.customer_phone)!}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-medium text-gray-800 hover:text-black"
+                          >
+                            {order.customer_phone}
+                          </a>
+                        ) : (
+                          <p className="font-medium text-gray-800">{order.customer_phone}</p>
+                        )}
+                      </div>
+                      <div className="rounded-lg bg-gray-50 px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wide text-gray-400">Entrega</p>
+                        <p className="font-medium text-gray-800">
+                          {DELIVERY_LABELS[order.delivery_type] ?? order.delivery_type}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wide text-gray-400">Data</p>
+                        <p className="font-medium text-gray-800">{formatDate(order.created_at)}</p>
+                      </div>
+                      <div className="rounded-lg bg-gray-50 px-3 py-2">
+                        <p className="text-[11px] uppercase tracking-wide text-gray-400">Total</p>
+                        <p className="font-semibold text-gray-900">{formatPrice(order.total)}</p>
+                      </div>
                     </div>
                   </div>
 
@@ -193,9 +225,43 @@ export default function AdminOrdersPage() {
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-300 mt-3">
-                  #{order.id.slice(0, 8).toUpperCase()}
-                </p>
+                <div className="border-t border-gray-100 pt-4">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                      Itens do pedido
+                    </p>
+                    <p className="text-xs text-gray-300">
+                      #{order.id.slice(0, 8).toUpperCase()}
+                    </p>
+                  </div>
+
+                  {order.order_items && order.order_items.length > 0 ? (
+                    <div className="space-y-2">
+                      {order.order_items.map((item, index) => (
+                        <div
+                          key={item.id ?? `${order.id}-${index}`}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-gray-900">
+                              {formatOrderItemLabel(item)}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {item.quantity} x {formatPrice(item.price)}
+                            </p>
+                          </div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            {formatPrice(item.quantity * item.price)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-gray-200 px-3 py-4 text-sm text-gray-400">
+                      Esse pedido não tem detalhes de itens salvos para exibição.
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}

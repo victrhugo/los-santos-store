@@ -10,6 +10,17 @@ export interface AdminOrder {
   total: number;
   status: string;
   created_at: string;
+  order_items?: AdminOrderItem[];
+}
+
+export interface AdminOrderItem {
+  id?: string;
+  product_id?: string | null;
+  product_name?: string | null;
+  variant_id?: string | null;
+  variant_name?: string | null;
+  quantity: number;
+  price: number;
 }
 
 export interface CreateProductInput {
@@ -157,7 +168,7 @@ export async function adminDeleteProduct(productId: string): Promise<void> {
 export async function adminGetOrders(): Promise<AdminOrder[]> {
   const { data, error } = await supabase
     .from("orders")
-    .select("*")
+    .select("*, order_items(id, product_id, product_name, variant_id, variant_name, quantity, price)")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data ?? [];

@@ -34,7 +34,15 @@ CREATE TABLE IF NOT EXISTS order_items (
 );
 
 -- order_items antiga pode existir sem a coluna variant_id → criar antes de ALTER
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_id UUID;
 ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_id UUID;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS product_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_name TEXT;
+
+ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_product_id_fkey;
+ALTER TABLE order_items
+  ADD CONSTRAINT order_items_product_id_fkey
+  FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE RESTRICT;
 
 -- Recriar FK (nullable) — seguro se a coluna já existia com NOT NULL
 ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_variant_id_fkey;

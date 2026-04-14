@@ -49,8 +49,10 @@ export interface Order {
 export interface OrderItem {
   order_id: string;
   product_id: string;
+  product_name?: string;
   /** Null quando o produto não tem linha em `product_variants` (variação “Padrão” só no cliente). */
   variant_id: string | null;
+  variant_name?: string | null;
   quantity: number;
   price: number;
 }
