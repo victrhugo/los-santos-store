@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/components/CartContext";
-import { createOrder } from "@/services/orders";
+import { createOrder, formatOrderError } from "@/services/orders";
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -68,9 +68,7 @@ export default function CheckoutPage() {
       clearCart();
       router.push(`/checkout/success?orderId=${orderId}`);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Erro ao finalizar pedido. Tente novamente."
-      );
+      setError(formatOrderError(err));
     } finally {
       setLoading(false);
     }
@@ -164,7 +162,10 @@ export default function CheckoutPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded">
+            <div
+              role="alert"
+              className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm leading-relaxed text-red-800"
+            >
               {error}
             </div>
           )}

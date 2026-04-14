@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getProductById, getProductVariants, getProductImages } from "@/services/products";
 import { useCart } from "@/components/CartContext";
 import { ImageGallery } from "@/components/ImageGallery";
+import { buildProductGalleryUrls } from "@/lib/productGallery";
 import type { Product, ProductVariant } from "@/types";
 
 function formatPrice(value: number) {
@@ -59,13 +60,8 @@ export default function ProductPage() {
           setSelectedVariant(syntheticVariant(p));
         }
 
-        // Build image list: primary first, then additional
         if (p) {
-          const extraUrls = imgs.map((i) => i.image_url);
-          const allUrls = p.image_url
-            ? [p.image_url, ...extraUrls.filter((u) => u !== p.image_url)]
-            : extraUrls;
-          setGalleryImages(allUrls);
+          setGalleryImages(buildProductGalleryUrls(p.image_url, imgs));
         }
       } finally {
         setLoading(false);
@@ -132,7 +128,7 @@ export default function ProductPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         {/* Image gallery */}
-        <ImageGallery images={galleryImages} alt={product.name} priority />
+        <ImageGallery key={product.id} images={galleryImages} alt={product.name} priority />
 
         {/* Info */}
         <div className="flex flex-col">

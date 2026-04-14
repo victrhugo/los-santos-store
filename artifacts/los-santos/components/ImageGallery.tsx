@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 
 interface ImageGalleryProps {
@@ -11,6 +11,12 @@ interface ImageGalleryProps {
 
 export function ImageGallery({ images, alt, priority = false }: ImageGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveIndex((i) =>
+      images.length === 0 ? 0 : Math.min(Math.max(0, i), images.length - 1)
+    );
+  }, [images]);
 
   if (images.length === 0) {
     return (
@@ -27,14 +33,16 @@ export function ImageGallery({ images, alt, priority = false }: ImageGalleryProp
     );
   }
 
-  const hasThumbs = images.length > 1;
+  const safeIndex = Math.min(Math.max(0, activeIndex), images.length - 1);
+  const thumbIndices = images.map((_, idx) => idx).filter((idx) => idx !== safeIndex);
+  const hasThumbs = thumbIndices.length > 0;
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Main image */}
-      <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden relative">
+      {/* Capa: uma imagem grande */}
+      <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-50">
         <Image
-          src={images[activeIndex]}
+          src={images[safeIndex]}
           alt={alt}
           fill
           className="object-cover transition-opacity duration-200"
@@ -43,23 +51,20 @@ export function ImageGallery({ images, alt, priority = false }: ImageGalleryProp
         />
       </div>
 
-      {/* Thumbnail strip */}
+      {/* Miniaturas: demais imagens (a capa não se repete aqui) */}
       {hasThumbs && (
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {images.map((url, idx) => (
+          {thumbIndices.map((idx) => (
             <button
               key={idx}
+              type="button"
               onClick={() => setActiveIndex(idx)}
-              className={`relative flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 transition-all ${
-                activeIndex === idx
-                  ? "border-black"
-                  : "border-transparent hover:border-gray-300"
-              }`}
+              className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border-2 border-transparent transition-all hover:border-gray-300"
               aria-label={`Ver imagem ${idx + 1}`}
             >
               <Image
-                src={url}
-                alt={`${alt} ${idx + 1}`}
+                src={images[idx]}
+                alt={`${alt} — miniatura ${idx + 1}`}
                 fill
                 className="object-cover"
                 sizes="64px"

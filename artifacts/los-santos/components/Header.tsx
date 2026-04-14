@@ -8,29 +8,34 @@ export default function Header() {
   const { count } = useCart();
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
-      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
-        <Link href="/" className="flex-shrink-0 flex items-center">
+    <header className="sticky top-0 z-50 border-b border-gray-100 bg-white shadow-sm">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+        <Link
+          href="/"
+          className="flex shrink-0 items-center justify-start"
+          aria-label="Los Santos — início"
+        >
           <Image
             src="/logo.png"
             alt="Los Santos"
-            width={120}
-            height={60}
-            style={{ maxHeight: "60px", width: "auto", objectFit: "contain" }}
+            width={180}
+            height={48}
+            className="h-12 max-h-[50px] min-h-[40px] w-auto object-contain object-left"
             priority
           />
         </Link>
 
-        <nav className="flex items-center gap-2 sm:gap-4">
+        <div className="flex shrink-0 items-center">
           <Link
             href="/cart"
-            className="relative flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-black transition-colors px-3 py-2 rounded-lg hover:bg-gray-50"
+            className="relative flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 hover:text-black"
           >
             <svg
-              className="w-4 h-4"
+              className="h-4 w-4 shrink-0"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden
             >
               <path
                 strokeLinecap="round"
@@ -41,13 +46,12 @@ export default function Header() {
             </svg>
             <span className="hidden sm:inline">Carrinho</span>
             {count > 0 && (
-              <span className="absolute -top-1 -right-1 sm:static sm:ml-0.5 bg-black text-white text-xs rounded-full w-5 h-5 flex items-center justify-center leading-none">
+              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black text-xs leading-none text-white sm:static sm:ml-0.5">
                 {count}
               </span>
             )}
           </Link>
-
-        </nav>
+        </div>
       </div>
     </header>
   );
