@@ -1,6 +1,37 @@
 import { supabase } from "@/lib/supabase";
 import type { Order, OrderItem } from "@/types";
 
+function isMissingProductIdSchemaError(error: unknown): boolean {
+  const err = error as { message?: string; code?: string };
+  const raw = (err.message ?? "").trim();
+  return (
+    err.code === "PGRST204" ||
+    /could not find the 'product_id' column of 'order_items' in the schema cache/i.test(raw)
+  );
+}
+
+async function insertOrderItems(
+  orderItems: Array<{
+    order_id: string;
+    product_id: string;
+    variant_id: string | null;
+    quantity: number;
+    price: number;
+  }>
+) {
+  const firstAttempt = await supabase.from("order_items").insert(orderItems);
+
+  if (!firstAttempt.error || !isMissingProductIdSchemaError(firstAttempt.error)) {
+    return firstAttempt;
+  }
+
+  // Compatibilidade com bancos antigos em que `order_items.product_id`
+  // ainda não existe no schema cache / tabela.
+  return await supabase.from("order_items").insert(
+    orderItems.map(({ product_id: _productId, ...legacyItem }) => legacyItem)
+  );
+}
+
 /** Mensagem legível para o usuário (checkout / UI). */
 export function formatOrderError(error: unknown): string {
   const err = error as { message?: string; code?: string };
@@ -76,9 +107,7 @@ export async function createOrder(
     };
   });
 
-  const { error: itemsError } = await supabase
-    .from("order_items")
-    .insert(orderItems);
+  const { error: itemsError } = await insertOrderItems(orderItems);
 
   if (itemsError) {
     await supabase.from("orders").delete().eq("id", orderId);

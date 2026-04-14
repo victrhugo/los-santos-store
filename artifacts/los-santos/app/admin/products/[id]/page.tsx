@@ -285,6 +285,7 @@ export default function EditProductPage() {
           onAddFiles={handleAddFiles}
           onRemove={handleRemoveNewEntry}
           disabled={imageUploading}
+          showFirstAsPrimary={false}
         />
 
         {imageError && (

@@ -13,26 +13,20 @@ function dedupeUrls(urls: string[]): string[] {
 }
 
 /**
- * Monta a lista da galeria sem misturar duas fontes:
- * - Se houver linhas em `product_images`, usa só essas URLs.
- * - Caso contrário, usa apenas `products.image_url`.
+ * Monta a galeria mantendo a capa original primeiro e adicionando as demais
+ * imagens cadastradas depois, sem repetir URLs.
  */
 export function buildProductGalleryUrls(
   primaryImageUrl: string | null | undefined,
   productImages: ProductImage[]
 ): string[] {
+  const primary = primaryImageUrl?.trim();
   const fromProductImages = productImages
     .map((row) => row.image_url?.trim())
     .filter((u): u is string => Boolean(u));
 
-  if (fromProductImages.length > 0) {
-    return dedupeUrls(fromProductImages);
-  }
-
-  const primary = primaryImageUrl?.trim();
-  if (primary) {
-    return [primary];
-  }
-
-  return [];
+  return dedupeUrls([
+    ...(primary ? [primary] : []),
+    ...fromProductImages,
+  ]);
 }

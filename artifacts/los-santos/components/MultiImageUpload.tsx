@@ -16,6 +16,7 @@ interface MultiImageUploadProps {
   onAddFiles: (files: File[]) => void;
   onRemove: (key: string) => void;
   disabled?: boolean;
+  showFirstAsPrimary?: boolean;
 }
 
 export function MultiImageUpload({
@@ -23,6 +24,7 @@ export function MultiImageUpload({
   onAddFiles,
   onRemove,
   disabled = false,
+  showFirstAsPrimary = true,
 }: MultiImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -65,7 +67,7 @@ export function MultiImageUpload({
                 />
               </div>
               {/* Primary badge */}
-              {(entry.isPrimary || idx === 0) && (
+              {(entry.isPrimary || (showFirstAsPrimary && idx === 0)) && (
                 <span className="absolute top-1 left-1 text-[10px] font-semibold bg-black text-white px-1.5 py-0.5 rounded">
                   Capa
                 </span>
