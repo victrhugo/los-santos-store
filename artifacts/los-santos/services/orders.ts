@@ -15,7 +15,7 @@ async function insertOrderItems(
   originalOrderItems: Array<{
     order_id: string;
     product_id: string;
-    product_name?: string;
+    product_name?: string | null;
     variant_id: string | null;
     variant_name?: string | null;
     quantity: number;
