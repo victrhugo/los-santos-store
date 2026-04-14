@@ -1,3 +1,4 @@
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { getProducts, getCategoriesWithSeed } from "@/services/products";
 import HomeClient from "@/components/HomeClient";
 import type { Category, Product } from "@/types";
@@ -5,6 +6,21 @@ import type { Category, Product } from "@/types";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  if (!isSupabaseConfigured()) {
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-20 text-center">
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 text-sm px-4 py-3 rounded-lg inline-block max-w-md">
+          <p className="font-medium mb-1">Supabase não configurado</p>
+          <p className="text-amber-800/90">
+            Defina <code className="text-xs bg-amber-100/80 px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code> e{" "}
+            <code className="text-xs bg-amber-100/80 px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> no painel da
+            Vercel (Settings → Environment Variables) e faça um novo deploy.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   let products: Product[] = [];
   let categories: Category[] = [];
   let error: string | null = null;
