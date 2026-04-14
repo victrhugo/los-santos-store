@@ -13,7 +13,10 @@ export function formatOrderError(error: unknown): string {
   if (/row-level security|RLS|permission denied|violates row-level security/i.test(raw)) {
     return "Não foi possível salvar o pedido. Verifique sua conexão e tente novamente.";
   }
-  if (/foreign key|violates foreign key constraint/i.test(raw)) {
+  if (
+    code === "23503" ||
+    /foreign key|violates foreign key constraint/i.test(raw)
+  ) {
     return "Um item do carrinho não está mais disponível. Atualize a página e tente de novo.";
   }
   if (raw.length > 0 && raw.length < 220) {
@@ -59,13 +62,19 @@ export async function createOrder(
 
   const orderId = orderData.id as string;
 
-  const orderItems = items.map((item) => ({
-    order_id: orderId,
-    product_id: item.product_id,
-    variant_id: item.variant_id,
-    quantity: item.quantity,
-    price: item.price,
-  }));
+  const orderItems = items.map((item) => {
+    const variantId =
+      item.variant_id !== null && item.variant_id === item.product_id
+        ? null
+        : item.variant_id;
+    return {
+      order_id: orderId,
+      product_id: item.product_id,
+      variant_id: variantId,
+      quantity: item.quantity,
+      price: item.price,
+    };
+  });
 
   const { error: itemsError } = await supabase
     .from("order_items")

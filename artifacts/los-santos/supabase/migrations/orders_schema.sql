@@ -1,4 +1,5 @@
--- Run no Supabase: SQL Editor → New query.
+-- Supabase (projeto hospedado): Dashboard → SQL Editor → colar este arquivo → Run.
+-- Não exige Supabase CLI; o app já usa @supabase/supabase-js contra esse mesmo banco.
 -- Garante tabela `orders` com customer_name, customer_phone e demais campos usados pelo app.
 
 -- Tabela completa (banco novo)
@@ -21,16 +22,26 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS total NUMERIC(12, 2) NOT NULL DEFAUL
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
--- Itens do pedido
+-- Itens do pedido (variant_id pode ser NULL: produto só com preço no `products`, sem linha em product_variants)
 CREATE TABLE IF NOT EXISTS order_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id UUID NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
   product_id UUID NOT NULL REFERENCES products (id) ON DELETE RESTRICT,
-  variant_id UUID NOT NULL REFERENCES product_variants (id) ON DELETE RESTRICT,
+  variant_id UUID REFERENCES product_variants (id) ON DELETE SET NULL,
   quantity INTEGER NOT NULL CHECK (quantity > 0),
   price NUMERIC(12, 2) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- order_items antiga pode existir sem a coluna variant_id → criar antes de ALTER
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS variant_id UUID;
+
+-- Recriar FK (nullable) — seguro se a coluna já existia com NOT NULL
+ALTER TABLE order_items DROP CONSTRAINT IF EXISTS order_items_variant_id_fkey;
+ALTER TABLE order_items ALTER COLUMN variant_id DROP NOT NULL;
+ALTER TABLE order_items
+  ADD CONSTRAINT order_items_variant_id_fkey
+  FOREIGN KEY (variant_id) REFERENCES product_variants (id) ON DELETE SET NULL;
 
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
