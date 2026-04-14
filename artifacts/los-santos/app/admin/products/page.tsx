@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { adminGetProducts } from "@/services/admin";
+import { adminDeleteProduct, adminGetProducts } from "@/services/admin";
 import type { Product } from "@/types";
 
 function formatPrice(value: number) {
@@ -17,6 +17,7 @@ export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     adminGetProducts()
@@ -24,6 +25,26 @@ export default function AdminProductsPage() {
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  async function handleDeleteProduct(product: Product) {
+    const confirmed = window.confirm(
+      `Excluir o produto "${product.name}"? Essa ação não pode ser desfeita.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingId(product.id);
+    setError(null);
+
+    try {
+      await adminDeleteProduct(product.id);
+      setProducts((prev) => prev.filter((item) => item.id !== product.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao excluir produto.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div>
@@ -122,15 +143,28 @@ export default function AdminProductsPage() {
                 )}
               </div>
 
-              <Link
-                href={`/admin/products/${product.id}`}
-                className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-black border border-gray-200 hover:border-gray-400 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                Editar
-              </Link>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Link
+                  href={`/admin/products/${product.id}`}
+                  className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-black border border-gray-200 hover:border-gray-400 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Editar
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteProduct(product)}
+                  disabled={deletingId === product.id}
+                  className="flex items-center gap-1.5 text-xs font-medium text-red-600 border border-red-200 hover:border-red-400 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-3h4m-5 0h5m-9 3h14" />
+                  </svg>
+                  {deletingId === product.id ? "Excluindo..." : "Excluir"}
+                </button>
+              </div>
             </div>
           ))}
         </div>

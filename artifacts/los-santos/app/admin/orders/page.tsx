@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { adminGetOrders, adminUpdateOrderStatus } from "@/services/admin";
+import {
+  adminDeleteOrder,
+  adminGetOrders,
+  adminUpdateOrderStatus,
+} from "@/services/admin";
 import type { AdminOrder } from "@/services/admin";
 
 function formatPrice(value: number) {
@@ -47,6 +51,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     adminGetOrders()
@@ -66,6 +71,26 @@ export default function AdminOrdersPage() {
       // ignore
     } finally {
       setUpdating(null);
+    }
+  }
+
+  async function handleDeleteOrder(order: AdminOrder) {
+    const confirmed = window.confirm(
+      `Excluir o pedido de "${order.customer_name}"? Essa ação não pode ser desfeita.`
+    );
+
+    if (!confirmed) return;
+
+    setDeletingId(order.id);
+    setError(null);
+
+    try {
+      await adminDeleteOrder(order.id);
+      setOrders((prev) => prev.filter((item) => item.id !== order.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao excluir pedido.");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -142,10 +167,10 @@ export default function AdminOrdersPage() {
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <select
                       value={order.status}
-                      disabled={updating === order.id}
+                      disabled={updating === order.id || deletingId === order.id}
                       onChange={(e) =>
                         handleStatusChange(order.id, e.target.value)
                       }
@@ -157,6 +182,14 @@ export default function AdminOrdersPage() {
                         </option>
                       ))}
                     </select>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteOrder(order)}
+                      disabled={deletingId === order.id}
+                      className="text-xs font-medium text-red-600 border border-red-200 hover:border-red-400 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors disabled:opacity-60"
+                    >
+                      {deletingId === order.id ? "Excluindo..." : "Excluir"}
+                    </button>
                   </div>
                 </div>
 

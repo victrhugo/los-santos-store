@@ -120,6 +120,40 @@ export async function adminDeleteVariant(variantId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export async function adminDeleteProduct(productId: string): Promise<void> {
+  const deleteImages = await supabase
+    .from("product_images")
+    .delete()
+    .eq("product_id", productId);
+
+  if (deleteImages.error && deleteImages.error.code !== "42P01") {
+    throw new Error(deleteImages.error.message);
+  }
+
+  const deleteVariants = await supabase
+    .from("product_variants")
+    .delete()
+    .eq("product_id", productId);
+
+  if (deleteVariants.error) {
+    throw new Error(deleteVariants.error.message);
+  }
+
+  const deleteProduct = await supabase
+    .from("products")
+    .delete()
+    .eq("id", productId);
+
+  if (deleteProduct.error) {
+    if (deleteProduct.error.code === "23503") {
+      throw new Error(
+        "Esse produto já está vinculado a pedidos e não pode ser excluído agora."
+      );
+    }
+    throw new Error(deleteProduct.error.message);
+  }
+}
+
 export async function adminGetOrders(): Promise<AdminOrder[]> {
   const { data, error } = await supabase
     .from("orders")
@@ -185,5 +219,14 @@ export async function adminUpdateOrderStatus(
     .from("orders")
     .update({ status })
     .eq("id", orderId);
+  if (error) throw new Error(error.message);
+}
+
+export async function adminDeleteOrder(orderId: string): Promise<void> {
+  const { error } = await supabase
+    .from("orders")
+    .delete()
+    .eq("id", orderId);
+
   if (error) throw new Error(error.message);
 }
