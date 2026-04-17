@@ -59,7 +59,7 @@ function SuccessContent() {
         if (data) {
           setSummary({
             total: Number(data.total),
-            items: ((data.order_items ?? []) as RawItem[]).map((item) => ({
+            items: ((data.order_items ?? []) as unknown as RawItem[]).map((item) => ({
               product_name: item.product_variants?.products?.name ?? null,
               variant_name: item.product_variants?.name ?? null,
               quantity: item.quantity,
