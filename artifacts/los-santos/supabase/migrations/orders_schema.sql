@@ -54,19 +54,39 @@ ALTER TABLE order_items
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "orders_select_public" ON orders;
-DROP POLICY IF EXISTS "orders_insert_public" ON orders;
-DROP POLICY IF EXISTS "orders_update_public" ON orders;
+-- orders: clientes podem criar; só admins autenticados lêem, atualizam e deletam
+DROP POLICY IF EXISTS "orders_select_public"  ON orders;
+DROP POLICY IF EXISTS "orders_insert_public"  ON orders;
+DROP POLICY IF EXISTS "orders_update_public"  ON orders;
+DROP POLICY IF EXISTS "orders_delete_public"  ON orders;
+DROP POLICY IF EXISTS "orders_select_admin"   ON orders;
+DROP POLICY IF EXISTS "orders_update_admin"   ON orders;
+DROP POLICY IF EXISTS "orders_delete_admin"   ON orders;
 
-CREATE POLICY "orders_select_public" ON orders FOR SELECT USING (true);
-CREATE POLICY "orders_insert_public" ON orders FOR INSERT WITH CHECK (true);
-CREATE POLICY "orders_update_public" ON orders FOR UPDATE USING (true);
-CREATE POLICY "orders_delete_public" ON orders FOR DELETE USING (true);
+CREATE POLICY "orders_insert_public" ON orders
+  FOR INSERT WITH CHECK (true);
 
+CREATE POLICY "orders_select_admin" ON orders
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "orders_update_admin" ON orders
+  FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "orders_delete_admin" ON orders
+  FOR DELETE USING (auth.role() = 'authenticated');
+
+-- order_items: clientes podem criar; só admins autenticados lêem e deletam
 DROP POLICY IF EXISTS "order_items_select_public" ON order_items;
 DROP POLICY IF EXISTS "order_items_insert_public" ON order_items;
 DROP POLICY IF EXISTS "order_items_delete_public" ON order_items;
+DROP POLICY IF EXISTS "order_items_select_admin"  ON order_items;
+DROP POLICY IF EXISTS "order_items_delete_admin"  ON order_items;
 
-CREATE POLICY "order_items_select_public" ON order_items FOR SELECT USING (true);
-CREATE POLICY "order_items_insert_public" ON order_items FOR INSERT WITH CHECK (true);
-CREATE POLICY "order_items_delete_public" ON order_items FOR DELETE USING (true);
+CREATE POLICY "order_items_insert_public" ON order_items
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "order_items_select_admin" ON order_items
+  FOR SELECT USING (auth.role() = 'authenticated');
+
+CREATE POLICY "order_items_delete_admin" ON order_items
+  FOR DELETE USING (auth.role() = 'authenticated');

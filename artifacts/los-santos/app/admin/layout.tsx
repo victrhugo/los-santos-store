@@ -45,9 +45,13 @@ export default function AdminLayout({
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }) => {
-      setUserEmail(data.user?.email ?? null);
+      if (!data.user) {
+        router.replace("/admin/login");
+        return;
+      }
+      setUserEmail(data.user.email ?? null);
     });
-  }, []);
+  }, [router]);
 
   async function handleLogout() {
     const supabase = createClient();
