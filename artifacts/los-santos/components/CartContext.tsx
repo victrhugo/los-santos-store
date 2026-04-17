@@ -45,13 +45,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setItems((prev) => {
         const existing = prev.find((i) => i.variant.id === variant.id);
         if (existing) {
+          const next = Math.min(existing.quantity + quantity, variant.stock);
           return prev.map((i) =>
-            i.variant.id === variant.id
-              ? { ...i, quantity: i.quantity + quantity }
-              : i
+            i.variant.id === variant.id ? { ...i, quantity: next } : i
           );
         }
-        return [...prev, { product, variant, quantity }];
+        return [...prev, { product, variant, quantity: Math.min(quantity, variant.stock) }];
       });
     },
     []
@@ -66,7 +65,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setItems((prev) => prev.filter((i) => i.variant.id !== variantId));
     } else {
       setItems((prev) =>
-        prev.map((i) => (i.variant.id === variantId ? { ...i, quantity } : i))
+        prev.map((i) => {
+          if (i.variant.id !== variantId) return i;
+          return { ...i, quantity: Math.min(quantity, i.variant.stock) };
+        })
       );
     }
   }, []);

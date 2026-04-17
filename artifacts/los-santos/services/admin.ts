@@ -15,12 +15,20 @@ export interface AdminOrder {
 
 export interface AdminOrderItem {
   id?: string;
-  product_id?: string | null;
   product_name?: string | null;
-  variant_id?: string | null;
   variant_name?: string | null;
   quantity: number;
   price: number;
+}
+
+interface RawOrderItem {
+  id?: string;
+  quantity: number;
+  price: number;
+  product_variants?: {
+    name: string;
+    products?: { name: string } | null;
+  } | null;
 }
 
 export interface CreateProductInput {
@@ -168,10 +176,32 @@ export async function adminDeleteProduct(productId: string): Promise<void> {
 export async function adminGetOrders(): Promise<AdminOrder[]> {
   const { data, error } = await supabase
     .from("orders")
-    .select("*, order_items(id, product_id, product_name, variant_id, variant_name, quantity, price)")
+    .select(`
+      *,
+      order_items(
+        id,
+        quantity,
+        price,
+        product_variants!product_variant_id(
+          name,
+          products(name)
+        )
+      )
+    `)
     .order("created_at", { ascending: false });
+
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  return (data ?? []).map((order) => ({
+    ...order,
+    order_items: ((order.order_items ?? []) as RawOrderItem[]).map((item) => ({
+      id: item.id,
+      product_name: item.product_variants?.products?.name ?? null,
+      variant_name: item.product_variants?.name ?? null,
+      quantity: item.quantity,
+      price: item.price,
+    })),
+  }));
 }
 
 export async function adminGetProductImages(
@@ -234,10 +264,22 @@ export async function adminUpdateOrderStatus(
 }
 
 export async function adminDeleteOrder(orderId: string): Promise<void> {
-  const { error } = await supabase
+  const { error: itemsError } = await supabase
+    .from("order_items")
+    .delete()
+    .eq("order_id", orderId);
+
+  if (itemsError) throw new Error(itemsError.message);
+
+  const { data, error } = await supabase
     .from("orders")
     .delete()
-    .eq("id", orderId);
+    .eq("id", orderId)
+    .select("id");
 
   if (error) throw new Error(error.message);
+
+  if (!data || data.length === 0) {
+    throw new Error("Não foi possível excluir o pedido. Verifique as permissões no Supabase (política DELETE ausente).");
+  }
 }

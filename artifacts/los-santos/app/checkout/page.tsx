@@ -6,6 +6,14 @@ import Link from "next/link";
 import { useCart } from "@/components/CartContext";
 import { createOrder, formatOrderError } from "@/services/orders";
 
+function applyPhoneMask(value: string): string {
+  const d = value.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 2) return d;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
 function formatPrice(value: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -46,6 +54,12 @@ export default function CheckoutPage() {
       return;
     }
 
+    const phoneDigits = form.customer_phone.replace(/\D/g, "");
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+      setError("Informe um telefone válido com DDD (10 ou 11 dígitos), ex: (11) 99999-0000.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -53,7 +67,7 @@ export default function CheckoutPage() {
       const orderId = await createOrder(
         {
           customer_name: form.customer_name.trim(),
-          customer_phone: form.customer_phone.trim(),
+          customer_phone: phoneDigits,
           delivery_type: form.delivery_type,
           total,
         },
@@ -118,7 +132,7 @@ export default function CheckoutPage() {
               type="tel"
               value={form.customer_phone}
               onChange={(e) =>
-                setForm((f) => ({ ...f, customer_phone: e.target.value }))
+                setForm((f) => ({ ...f, customer_phone: applyPhoneMask(e.target.value) }))
               }
               placeholder="(00) 00000-0000"
               required

@@ -61,9 +61,12 @@ DROP POLICY IF EXISTS "orders_update_public" ON orders;
 CREATE POLICY "orders_select_public" ON orders FOR SELECT USING (true);
 CREATE POLICY "orders_insert_public" ON orders FOR INSERT WITH CHECK (true);
 CREATE POLICY "orders_update_public" ON orders FOR UPDATE USING (true);
+CREATE POLICY "orders_delete_public" ON orders FOR DELETE USING (true);
 
 DROP POLICY IF EXISTS "order_items_select_public" ON order_items;
 DROP POLICY IF EXISTS "order_items_insert_public" ON order_items;
+DROP POLICY IF EXISTS "order_items_delete_public" ON order_items;
 
 CREATE POLICY "order_items_select_public" ON order_items FOR SELECT USING (true);
 CREATE POLICY "order_items_insert_public" ON order_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "order_items_delete_public" ON order_items FOR DELETE USING (true);

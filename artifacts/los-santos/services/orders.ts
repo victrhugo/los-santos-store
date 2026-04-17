@@ -11,6 +11,35 @@ function getMissingSchemaColumn(error: unknown): string | null {
   return match?.[1] ?? null;
 }
 
+async function insertOrder(originalPayload: {
+  customer_name: string;
+  customer_phone: string;
+  total: number;
+  delivery_type: string;
+  status: string;
+}) {
+  let payload = { ...originalPayload } as Record<string, unknown>;
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const result = await supabase
+      .from("orders")
+      .insert(payload)
+      .select("id")
+      .single();
+
+    if (!result.error) return result;
+
+    const missingColumn = getMissingSchemaColumn(result.error);
+    if (!missingColumn) return result;
+
+    const next = { ...payload };
+    delete next[missingColumn];
+    payload = next;
+  }
+
+  return await supabase.from("orders").insert(payload).select("id").single();
+}
+
 async function insertOrderItems(
   originalOrderItems: Array<{
     order_id: string;
@@ -129,7 +158,12 @@ export function formatOrderError(error: unknown): string {
   const raw = (err.message ?? "").trim();
   const code = err.code ?? "";
 
-  if (code === "42703" || /column .* does not exist/i.test(raw)) {
+  if (
+    code === "42703" ||
+    code === "PGRST204" ||
+    /column .* does not exist/i.test(raw) ||
+    /could not find the .* column/i.test(raw)
+  ) {
     return "Não foi possível registrar o pedido: configuração do servidor incompleta. Avise a loja ou tente mais tarde.";
   }
   if (/row-level security|RLS|permission denied|violates row-level security/i.test(raw)) {
@@ -164,17 +198,13 @@ export async function createOrder(
 
   const stockUpdates = await prepareStockUpdates(items);
 
-  const { data: orderData, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      customer_name,
-      customer_phone,
-      total: order.total,
-      delivery_type: order.delivery_type,
-      status: "pending",
-    })
-    .select("id")
-    .single();
+  const { data: orderData, error: orderError } = await insertOrder({
+    customer_name,
+    customer_phone,
+    total: order.total,
+    delivery_type: order.delivery_type,
+    status: "pending",
+  });
 
   if (orderError) {
     throw new Error(formatOrderError(orderError));

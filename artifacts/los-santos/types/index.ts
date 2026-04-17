@@ -12,6 +12,7 @@ export interface Product {
   category_id: string | null;
   categories: Category | null;
   created_at: string;
+  product_variants?: { stock: number }[];
 }
 
 export interface ProductVariant {

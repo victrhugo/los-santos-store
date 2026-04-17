@@ -82,7 +82,7 @@ export async function getCategoriesWithSeed(): Promise<Category[]> {
 export async function getProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("*, categories(id, name)")
+    .select("*, categories(id, name), product_variants(stock)")
     .order("created_at", { ascending: false });
 
   console.log("[getProducts] count:", data?.length ?? 0, error ? `error: ${error.message}` : "ok");
