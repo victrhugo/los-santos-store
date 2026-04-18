@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { CartProvider } from "@/components/CartContext";
 import Header from "@/components/Header";
+import FloatingContacts from "@/components/FloatingContacts";
 
 export const metadata: Metadata = {
   title: "Los Santos Store",
@@ -28,6 +29,7 @@ export default function RootLayout({
             © {new Date().getFullYear()} Los Santos Store. Todos os direitos
             reservados.
           </footer>
+          <FloatingContacts />
         </CartProvider>
       </body>
     </html>
