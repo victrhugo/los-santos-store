@@ -241,6 +241,21 @@ export async function adminDeleteProductImage(imageId: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export async function adminUpdateProduct(
+  productId: string,
+  input: { name: string; description: string; price: number }
+): Promise<void> {
+  const { error } = await supabase
+    .from("products")
+    .update({
+      name: input.name,
+      description: input.description || null,
+      price: input.price,
+    })
+    .eq("id", productId);
+  if (error) throw new Error(error.message);
+}
+
 export async function adminUpdateProductPrimaryImage(
   productId: string,
   imageUrl: string | null

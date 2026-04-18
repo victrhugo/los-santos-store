@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
+  adminUpdateProduct,
   adminCreateVariant,
   adminDeleteVariant,
   adminGetVariants,
@@ -35,6 +36,14 @@ export default function EditProductPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Product info edit form
+  const [infoName, setInfoName] = useState("");
+  const [infoDescription, setInfoDescription] = useState("");
+  const [infoPrice, setInfoPrice] = useState("");
+  const [infoSaving, setInfoSaving] = useState(false);
+  const [infoSaved, setInfoSaved] = useState(false);
+  const [infoError, setInfoError] = useState<string | null>(null);
+
   const [variantForm, setVariantForm] = useState({ name: "", price: "", stock: "" });
   const [variantLoading, setVariantLoading] = useState(false);
   const [variantError, setVariantError] = useState<string | null>(null);
@@ -63,12 +72,50 @@ export default function EditProductPage() {
         setProduct(p);
         setVariants(v);
         setDbImages(imgs);
+        if (p) {
+          setInfoName(p.name);
+          setInfoDescription(p.description ?? "");
+          setInfoPrice(String(p.price));
+        }
       })
       .catch((e) => {
         setLoadError(e instanceof Error ? e.message : "Erro inesperado.");
       })
       .finally(() => setLoading(false));
   }, [productId]);
+
+  /* ── Product info ─────────────────────────────────────── */
+  async function handleSaveInfo(e: React.FormEvent) {
+    e.preventDefault();
+    if (!productId) return;
+    const trimmedName = infoName.trim();
+    if (!trimmedName) {
+      setInfoError("O nome do produto é obrigatório.");
+      return;
+    }
+    const parsedPrice = parseFloat(infoPrice);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      setInfoError("Informe um preço válido.");
+      return;
+    }
+    setInfoSaving(true);
+    setInfoError(null);
+    setInfoSaved(false);
+    try {
+      await adminUpdateProduct(productId, {
+        name: trimmedName,
+        description: infoDescription.trim(),
+        price: parsedPrice,
+      });
+      setProduct((p) => p ? { ...p, name: trimmedName, description: infoDescription.trim(), price: parsedPrice } : p);
+      setInfoSaved(true);
+      setTimeout(() => setInfoSaved(false), 3000);
+    } catch (e) {
+      setInfoError(e instanceof Error ? e.message : "Erro ao salvar.");
+    } finally {
+      setInfoSaving(false);
+    }
+  }
 
   /* ── Variants ─────────────────────────────────────────── */
   async function handleAddVariant(e: React.FormEvent) {
@@ -233,6 +280,85 @@ export default function EditProductPage() {
           )}
         </div>
       </div>
+
+      {/* ── Product info section ───────────────────────── */}
+      <form onSubmit={handleSaveInfo} className="bg-white border border-gray-100 rounded-xl p-6 mb-4">
+        <h2 className="text-sm font-semibold text-gray-700 mb-4">Informações do produto</h2>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+              Nome *
+            </label>
+            <input
+              type="text"
+              value={infoName}
+              onChange={(e) => setInfoName(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
+              placeholder="Nome do produto"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+              Descrição
+            </label>
+            <textarea
+              value={infoDescription}
+              onChange={(e) => setInfoDescription(e.target.value)}
+              rows={3}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors resize-none"
+              placeholder="Descrição do produto"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+              Preço base (R$)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={infoPrice}
+              onChange={(e) => setInfoPrice(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
+              placeholder="0,00"
+            />
+          </div>
+        </div>
+
+        {infoError && (
+          <div className="mt-3 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
+            {infoError}
+          </div>
+        )}
+
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={infoSaving}
+            className="flex items-center gap-2 bg-black text-white text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-60"
+          >
+            {infoSaving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              "Salvar alterações"
+            )}
+          </button>
+          {infoSaved && (
+            <span className="text-sm text-green-600 font-medium flex items-center gap-1.5">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+              Salvo com sucesso
+            </span>
+          )}
+        </div>
+      </form>
 
       {/* ── Images section ─────────────────────────────── */}
       <div className="bg-white border border-gray-100 rounded-xl p-6 mb-4">
