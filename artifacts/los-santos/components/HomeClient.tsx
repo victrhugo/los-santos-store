@@ -2,16 +2,22 @@
 
 import { useState, useRef, useMemo } from "react";
 import Link from "next/link";
+import { Shirt, Glasses, ShoppingBag, Sparkles, Package, Tag } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import type { Category, Product } from "@/types";
 
-const CATEGORY_ICONS: Record<string, string> = {
-  Roupas: "👕",
-  Óculos: "🕶️",
-  Acessórios: "👜",
-  Perfumes: "✨",
-  Outro: "📦",
+const CATEGORY_ICONS: Record<string, React.ElementType> = {
+  Roupas:     Shirt,
+  Óculos:     Glasses,
+  Acessórios: ShoppingBag,
+  Perfumes:   Sparkles,
+  Outro:      Package,
 };
+
+function CategoryIcon({ name, className }: { name: string; className?: string }) {
+  const Icon = CATEGORY_ICONS[name] ?? Tag;
+  return <Icon className={className} strokeWidth={1.75} />;
+}
 
 interface Props {
   products: Product[];
@@ -68,25 +74,26 @@ export default function HomeClient({ products, categories }: Props) {
   return (
     <>
       {/* Announcement bar */}
-      <div className="bg-black text-white">
-        <div className="max-w-6xl mx-auto px-4 py-2 flex items-center justify-center gap-6 text-xs font-medium tracking-wide overflow-x-auto whitespace-nowrap">
-          <span className="flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8" />
+      <div className="bg-gray-950 border-b border-white/5">
+        <div className="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-center gap-8 overflow-x-auto whitespace-nowrap">
+          <span className="flex items-center gap-2 text-[11px] font-medium text-white/60 tracking-wide">
+            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.937A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
             </svg>
             Nova coleção disponível
           </span>
-          <span className="text-white/30">·</span>
-          <span className="flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <span className="w-px h-3 bg-white/15 flex-shrink-0" />
+          <span className="flex items-center gap-2 text-[11px] font-medium text-white/60 tracking-wide">
+            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+              <circle cx="12" cy="10" r="3" />
             </svg>
             Retirada na loja
           </span>
-          <span className="text-white/30">·</span>
-          <span className="flex items-center gap-1.5">
-            <svg className="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          <span className="w-px h-3 bg-white/15 flex-shrink-0" />
+          <span className="flex items-center gap-2 text-[11px] font-medium text-white/60 tracking-wide">
+            <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+              <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
             </svg>
             Atendimento via WhatsApp
           </span>
@@ -95,43 +102,50 @@ export default function HomeClient({ products, categories }: Props) {
 
       {/* Hero */}
       <section className="relative bg-black overflow-hidden">
+        {/* Dot grid */}
         <div
-          className="absolute inset-0 opacity-[0.07]"
+          className="absolute inset-0 opacity-[0.06]"
           style={{
-            backgroundImage:
-              "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-            backgroundSize: "32px 32px",
+            backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+            backgroundSize: "28px 28px",
           }}
         />
+        {/* Color glow */}
         <div
-          className="absolute inset-0 opacity-25"
+          className="absolute inset-0 opacity-20"
           style={{
-            backgroundImage:
-              "radial-gradient(ellipse at 75% 50%, #4f46e5 0%, transparent 55%)",
+            backgroundImage: "radial-gradient(ellipse at 70% 60%, #4f46e5 0%, transparent 60%)",
           }}
         />
-        <div className="relative max-w-6xl mx-auto px-4 py-24 sm:py-32 flex flex-col items-start">
-          <span className="inline-flex items-center gap-1.5 bg-white/10 text-white/90 text-xs font-semibold tracking-widest uppercase px-3 py-1.5 rounded-full mb-6 border border-white/20">
+        <div className="relative max-w-6xl mx-auto px-4 py-16 sm:py-20 flex flex-col items-start animate-[fadeIn_0.5s_ease]">
+          {/* Badge */}
+          <span className="inline-flex items-center gap-1.5 bg-white/10 text-white/80 text-[11px] font-semibold tracking-widest uppercase px-3 py-1 rounded-full mb-5 border border-white/15">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             Nova coleção
           </span>
-          <h1 className="text-5xl sm:text-7xl font-black text-white tracking-tight leading-[1.05] max-w-2xl">
+
+          {/* Title */}
+          <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-[1.08] max-w-xl">
             Los Santos
             <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-300 to-gray-500">
               Store
             </span>
           </h1>
-          <p className="mt-5 text-gray-400 text-base sm:text-lg max-w-md leading-relaxed">
-            Roupas, acessórios e perfumes com estilo. Peças únicas para o seu look.
+
+          {/* Subtitle */}
+          <p className="mt-4 text-gray-400 text-sm sm:text-base max-w-sm leading-relaxed">
+            Roupas, acessórios e perfumes com estilo.
           </p>
-          <div className="mt-8 flex items-center gap-3 flex-wrap">
+
+          {/* CTAs */}
+          <div className="mt-7 flex items-center gap-2.5 flex-wrap">
             <button
               onClick={scrollToProducts}
-              className="inline-flex items-center gap-2 bg-white text-black font-bold text-sm px-7 py-3.5 rounded-full hover:bg-gray-100 transition-colors shadow-lg shadow-white/10"
+              className="inline-flex items-center gap-1.5 bg-white text-black font-bold text-sm px-5 py-2.5 rounded-full hover:bg-gray-100 active:scale-95 transition-all shadow-md shadow-white/10"
             >
               Ver produtos
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
@@ -140,12 +154,12 @@ export default function HomeClient({ products, categories }: Props) {
                 scrollToProducts();
                 setTimeout(() => searchRef.current?.focus(), 400);
               }}
-              className="inline-flex items-center gap-2 border border-white/20 text-white/80 font-medium text-sm px-7 py-3.5 rounded-full hover:bg-white/10 hover:text-white transition-colors"
+              className="inline-flex items-center gap-1.5 border border-white/20 text-white/70 font-medium text-sm px-5 py-2.5 rounded-full hover:bg-white/10 hover:text-white active:scale-95 transition-all"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              Buscar produto
+              Buscar
             </button>
           </div>
         </div>
@@ -153,8 +167,8 @@ export default function HomeClient({ products, categories }: Props) {
 
       {/* Category cards — shown above products when no active filter */}
       {!hasActiveFilters && categories.length > 0 && (
-        <section className="border-b border-gray-100 bg-white">
-          <div className="max-w-6xl mx-auto px-4 py-8">
+        <section className="bg-[#f4f4f5] border-b border-gray-200/60">
+          <div className="max-w-6xl mx-auto px-4 py-10">
             <div className="flex items-end justify-between mb-5">
               <h2 className="text-base font-bold text-black tracking-tight">Explorar por categoria</h2>
               <button
@@ -177,7 +191,9 @@ export default function HomeClient({ products, categories }: Props) {
                       style={{ backgroundImage: "radial-gradient(circle at 80% 20%, #374151 0%, transparent 70%)" }}
                     />
                     <div className="relative">
-                      <div className="text-2xl mb-3">{CATEGORY_ICONS[cat.name] ?? "🏷️"}</div>
+                      <div className="mb-3 w-7 h-7 text-gray-400 group-hover:text-white/70 transition-colors">
+                        <CategoryIcon name={cat.name} className="w-7 h-7" />
+                      </div>
                       <p className="font-semibold text-gray-900 group-hover:text-white text-sm transition-colors">{cat.name}</p>
                       <p className="text-xs text-gray-400 group-hover:text-gray-300 mt-0.5 transition-colors">
                         {count} produto{count !== 1 ? "s" : ""}
@@ -240,13 +256,13 @@ export default function HomeClient({ products, categories }: Props) {
                   <button
                     key={cat.id}
                     onClick={() => setActiveCategory(activeCategory === cat.name ? null : cat.name)}
-                    className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                    className={`flex-shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
                       activeCategory === cat.name
                         ? "bg-black text-white"
                         : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                     }`}
                   >
-                    <span className="text-base leading-none">{CATEGORY_ICONS[cat.name] ?? "🏷️"}</span>
+                    <CategoryIcon name={cat.name} className="w-3.5 h-3.5 flex-shrink-0" />
                     {cat.name}
                   </button>
                 ))}
@@ -257,10 +273,11 @@ export default function HomeClient({ products, categories }: Props) {
       </div>
 
       {/* Products section */}
-      <section id="produtos" ref={productsRef} className="max-w-6xl mx-auto px-4 py-10">
-        <div className="flex items-end justify-between mb-6">
+      <section id="produtos" ref={productsRef} className="bg-white">
+        <div className="max-w-6xl mx-auto px-4 py-14">
+        <div className="flex items-end justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-black tracking-tight">
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
               {searchQuery.trim()
                 ? `Resultados para "${searchQuery.trim()}"`
                 : activeCategory
@@ -302,7 +319,8 @@ export default function HomeClient({ products, categories }: Props) {
             )}
             {activeCategory && (
               <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full">
-                {CATEGORY_ICONS[activeCategory] ?? "🏷️"} {activeCategory}
+                <CategoryIcon name={activeCategory} className="w-3 h-3 flex-shrink-0" />
+                {activeCategory}
                 <button onClick={() => setActiveCategory(null)} className="ml-1 hover:text-black">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -336,24 +354,25 @@ export default function HomeClient({ products, categories }: Props) {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
             {filtered.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
         )}
+        </div>
       </section>
 
       {/* CTA bottom */}
-      <section className="bg-black py-16">
+      <section className="bg-gray-950 py-20">
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <p className="text-white text-2xl font-bold mb-2">Gostou do que viu?</p>
-          <p className="text-gray-400 text-sm mb-7">
+          <p className="text-white text-3xl font-black tracking-tight mb-3">Gostou do que viu?</p>
+          <p className="text-gray-400 text-sm mb-8 max-w-sm mx-auto leading-relaxed">
             Adicione produtos ao carrinho e finalize seu pedido com entrega ou retirada.
           </p>
           <Link
             href="/cart"
-            className="inline-flex items-center gap-2 bg-white text-black font-semibold text-sm px-7 py-3.5 rounded-full hover:bg-gray-100 transition-colors shadow-lg shadow-white/10"
+            className="inline-flex items-center gap-2 bg-white text-black font-bold text-sm px-8 py-4 rounded-full hover:bg-gray-100 active:scale-95 transition-all shadow-xl shadow-white/5"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />

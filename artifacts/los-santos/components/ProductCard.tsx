@@ -58,14 +58,14 @@ export default function ProductCard({ product }: Props) {
 
   const imageArea = (
     <div className="px-3 pt-3">
-      <div className={`relative aspect-square rounded-xl overflow-hidden bg-gray-50 ${soldOut ? "" : "group-hover:shadow-md transition-shadow duration-300"}`}>
+      <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50">
         {product.image_url ? (
           <Image
             src={product.image_url}
             alt={product.name}
             fill
-            className={`object-cover transition-transform duration-500 ${
-              soldOut ? "opacity-50" : "group-hover:scale-[1.07]"
+            className={`object-cover transition-transform duration-500 ease-out ${
+              soldOut ? "opacity-50" : "group-hover:scale-[1.04]"
             }`}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
@@ -86,8 +86,8 @@ export default function ProductCard({ product }: Props) {
 
         {/* Hover CTA overlay */}
         {!soldOut && (
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100">
-            <span className="bg-white text-black text-xs font-semibold px-4 py-1.5 rounded-full shadow-lg translate-y-2 group-hover:translate-y-0 transition-transform duration-200">
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/8 transition-all duration-300 flex items-end justify-center pb-3 opacity-0 group-hover:opacity-100">
+            <span className="bg-white text-black text-xs font-bold px-4 py-1.5 rounded-full shadow-md translate-y-3 group-hover:translate-y-0 transition-transform duration-300">
               Ver produto
             </span>
           </div>
@@ -103,7 +103,7 @@ export default function ProductCard({ product }: Props) {
           {categoryName}
         </p>
       )}
-      <h3 className={`text-sm leading-snug line-clamp-2 ${soldOut ? "text-gray-400 font-normal" : "text-gray-700 font-medium"}`}>
+      <h3 className={`text-sm leading-snug line-clamp-2 ${soldOut ? "text-gray-400 font-normal" : "text-gray-800 font-semibold"}`}>
         {product.name}
       </h3>
       <p className={`text-xl font-black tracking-tight mt-1.5 ${soldOut ? "text-gray-300" : "text-black"}`}>
@@ -114,7 +114,7 @@ export default function ProductCard({ product }: Props) {
 
   if (soldOut) {
     return (
-      <div className="flex flex-col bg-white rounded-2xl border border-gray-100 cursor-not-allowed overflow-hidden">
+      <div className="flex flex-col bg-white rounded-2xl shadow-[0_1px_6px_rgba(0,0,0,0.06)] opacity-55 cursor-not-allowed overflow-hidden">
         {imageArea}
         {infoArea}
       </div>
@@ -124,7 +124,7 @@ export default function ProductCard({ product }: Props) {
   return (
     <Link
       href={`/product/${product.id}`}
-      className="group flex flex-col bg-white rounded-2xl border border-gray-100 hover:border-gray-200 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+      className="group flex flex-col bg-white rounded-2xl shadow-[0_1px_6px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:-translate-y-1 transition-all duration-200 overflow-hidden"
     >
       {imageArea}
       {infoArea}
