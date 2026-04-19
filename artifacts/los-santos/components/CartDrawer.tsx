@@ -133,7 +133,7 @@ export default function CartDrawer() {
                   {/* Qty controls */}
                   <div className="flex items-center gap-2 mt-2">
                     <button
-                      onClick={() => removeItem(item.product.id, item.variant.id)}
+                      onClick={() => removeItem(item.variant.id)}
                       className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-gray-900 hover:text-black transition-all text-sm font-bold"
                       aria-label="Remover um"
                     >
