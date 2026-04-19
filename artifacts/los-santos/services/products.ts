@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { Category, Product, ProductImage, ProductVariant } from "@/types";
+import type { Category, Product, ProductImage, ProductVariant, Subcategory } from "@/types";
 
 const DEFAULT_CATEGORIES = ["Roupas", "Óculos", "Perfumes", "Acessórios"];
 
@@ -79,10 +79,34 @@ export async function getCategoriesWithSeed(): Promise<Category[]> {
   }
 }
 
+export async function getFeaturedProducts(): Promise<Product[]> {
+  const { data, error } = await supabase
+    .from("products")
+    .select("*, categories(id, name), subcategories(id, name, category_id), product_variants(stock), product_images(image_url)")
+    .eq("featured", true)
+    .order("featured_order", { ascending: true, nullsFirst: false })
+    .limit(6);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Product[];
+}
+
+export async function getSubcategoriesByCategoryId(categoryId: string): Promise<Subcategory[]> {
+  const { data, error } = await supabase
+    .from("subcategories")
+    .select("id, name, category_id")
+    .eq("category_id", categoryId)
+    .order("name", { ascending: true });
+  if (error) {
+    if (error.code === "42P01") return [];
+    throw new Error(error.message);
+  }
+  return (data ?? []) as Subcategory[];
+}
+
 export async function getProducts(): Promise<Product[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("*, categories(id, name), product_variants(stock)")
+    .select("*, categories(id, name), subcategories(id, name, category_id), product_variants(stock), product_images(image_url)")
     .order("created_at", { ascending: false });
 
   console.log("[getProducts] count:", data?.length ?? 0, error ? `error: ${error.message}` : "ok");
@@ -103,7 +127,7 @@ export async function getProductById(
 
   const { data, error } = await supabase
     .from("products")
-    .select("*, categories(id, name)")
+    .select("*, categories(id, name), subcategories(id, name, category_id)")
     .eq("id", id.trim())
     .single();
 

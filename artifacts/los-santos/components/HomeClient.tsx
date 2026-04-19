@@ -2,13 +2,12 @@
 
 import { useState, useRef, useMemo } from "react";
 import Link from "next/link";
-import { Shirt, Glasses, ShoppingBag, Sparkles, Package, Tag } from "lucide-react";
+import { Shirt, ShoppingBag, Sparkles, Package, Tag } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
-import type { Category, Product } from "@/types";
+import type { Category, Product, Subcategory } from "@/types";
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   Roupas:     Shirt,
-  Óculos:     Glasses,
   Acessórios: ShoppingBag,
   Perfumes:   Sparkles,
   Outro:      Package,
@@ -22,41 +21,66 @@ function CategoryIcon({ name, className }: { name: string; className?: string })
 interface Props {
   products: Product[];
   categories: Category[];
+  featuredProducts: Product[];
 }
 
 function filterProducts(
   products: Product[],
   query: string,
-  category: string | null
+  category: string | null,
+  subcategory: string | null
 ): Product[] {
   const q = query.trim().toLowerCase();
   return products.filter((p) => {
     const catName = p.categories?.name ?? "";
+    const subName = p.subcategories?.name ?? "";
     const matchesCategory = category === null || catName === category;
+    const matchesSubcategory = subcategory === null || subName === subcategory;
     const matchesQuery =
       q === "" ||
       p.name.toLowerCase().includes(q) ||
       (p.description ?? "").toLowerCase().includes(q) ||
-      catName.toLowerCase().includes(q);
-    return matchesCategory && matchesQuery;
+      catName.toLowerCase().includes(q) ||
+      subName.toLowerCase().includes(q);
+    return matchesCategory && matchesSubcategory && matchesQuery;
   });
 }
 
-export default function HomeClient({ products, categories }: Props) {
+export default function HomeClient({ products, categories, featuredProducts }: Props) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const productsRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(
-    () => filterProducts(products, searchQuery, activeCategory),
-    [products, searchQuery, activeCategory]
+    () => filterProducts(products, searchQuery, activeCategory, activeSubcategory),
+    [products, searchQuery, activeCategory, activeSubcategory]
   );
 
-  const hasActiveFilters = searchQuery.trim() !== "" || activeCategory !== null;
+  // Derive subcategories available for the active category from product data
+  const availableSubcategories = useMemo<Subcategory[]>(() => {
+    if (!activeCategory) return [];
+    const seen = new Set<string>();
+    const subs: Subcategory[] = [];
+    for (const p of products) {
+      if (p.categories?.name === activeCategory && p.subcategories) {
+        const sub = p.subcategories;
+        if (!seen.has(sub.id)) {
+          seen.add(sub.id);
+          subs.push(sub);
+        }
+      }
+    }
+    return subs.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [products, activeCategory]);
+
+  const hasActiveFilters =
+    searchQuery.trim() !== "" || activeCategory !== null || activeSubcategory !== null;
 
   function handleCategoryClick(cat: string | null) {
     setActiveCategory(cat);
+    setActiveSubcategory(null);
     setTimeout(() => {
       productsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 50);
@@ -65,6 +89,7 @@ export default function HomeClient({ products, categories }: Props) {
   function clearAllFilters() {
     setSearchQuery("");
     setActiveCategory(null);
+    setActiveSubcategory(null);
   }
 
   function scrollToProducts() {
@@ -165,12 +190,40 @@ export default function HomeClient({ products, categories }: Props) {
         </div>
       </section>
 
+      {/* Featured products */}
+      {featuredProducts.length > 0 && (
+        <section className="bg-white border-b border-gray-100">
+          <div className="max-w-6xl mx-auto px-4 py-16">
+            <div className="flex items-end justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-bold text-black">Destaques</h2>
+                <p className="text-sm text-gray-500 mt-1">Selecionados especialmente para você</p>
+              </div>
+              <button
+                onClick={scrollToProducts}
+                className="text-xs font-semibold text-gray-400 hover:text-black transition-colors flex items-center gap-1"
+              >
+                Ver todos
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
+              {featuredProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Category cards — shown above products when no active filter */}
       {!hasActiveFilters && categories.length > 0 && (
         <section className="bg-[#f4f4f5] border-b border-gray-200/60">
-          <div className="max-w-6xl mx-auto px-4 py-10">
-            <div className="flex items-end justify-between mb-5">
-              <h2 className="text-base font-bold text-black tracking-tight">Explorar por categoria</h2>
+          <div className="max-w-6xl mx-auto px-4 py-12">
+            <div className="flex items-end justify-between mb-6">
+              <h2 className="text-base font-semibold text-black tracking-tight">Explorar por categoria</h2>
               <button
                 onClick={() => handleCategoryClick(null)}
                 className="text-xs text-gray-400 hover:text-black transition-colors"
@@ -207,10 +260,11 @@ export default function HomeClient({ products, categories }: Props) {
         </section>
       )}
 
-      {/* Search + Filters sticky bar */}
+      {/* Search + subcategory filter bar */}
       <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-gray-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
+        <div className="max-w-6xl mx-auto px-4 pt-3 pb-0">
+          {/* Search row */}
+          <div className="relative pb-3">
             <svg
               className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
               fill="none"
@@ -224,7 +278,7 @@ export default function HomeClient({ products, categories }: Props) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar produto por nome..."
+              placeholder={activeCategory ? `Buscar em ${activeCategory}...` : "Buscar produto por nome..."}
               className="w-full pl-10 pr-10 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-black transition-colors bg-gray-50 focus:bg-white"
             />
             {searchQuery && (
@@ -239,47 +293,49 @@ export default function HomeClient({ products, categories }: Props) {
             )}
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            {categories.length > 0 && (
-              <>
+          {/* Subcategory pills — only when a category is active and has subcategories */}
+          {activeCategory && availableSubcategories.length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-3 border-t border-gray-100 pt-2.5">
+              <button
+                onClick={() => setActiveSubcategory(null)}
+                className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                  activeSubcategory === null
+                    ? "bg-black text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                Todos
+              </button>
+              {availableSubcategories.map((sub) => (
                 <button
-                  onClick={() => setActiveCategory(null)}
+                  key={sub.id}
+                  onClick={() =>
+                    setActiveSubcategory(activeSubcategory === sub.name ? null : sub.name)
+                  }
                   className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
-                    activeCategory === null
+                    activeSubcategory === sub.name
                       ? "bg-black text-white"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  Todos
+                  {sub.name}
                 </button>
-                {categories.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(activeCategory === cat.name ? null : cat.name)}
-                    className={`flex-shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
-                      activeCategory === cat.name
-                        ? "bg-black text-white"
-                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                    }`}
-                  >
-                    <CategoryIcon name={cat.name} className="w-3.5 h-3.5 flex-shrink-0" />
-                    {cat.name}
-                  </button>
-                ))}
-              </>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Products section */}
       <section id="produtos" ref={productsRef} className="bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-14">
+        <div className="max-w-6xl mx-auto px-4 py-16">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+            <h2 className="text-2xl font-bold text-gray-900">
               {searchQuery.trim()
                 ? `Resultados para "${searchQuery.trim()}"`
+                : activeSubcategory
+                ? activeSubcategory
                 : activeCategory
                 ? activeCategory
                 : "Todos os produtos"}
@@ -309,7 +365,7 @@ export default function HomeClient({ products, categories }: Props) {
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                "{searchQuery.trim()}"
+                &quot;{searchQuery.trim()}&quot;
                 <button onClick={() => setSearchQuery("")} className="ml-1 hover:text-black">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -321,7 +377,17 @@ export default function HomeClient({ products, categories }: Props) {
               <span className="inline-flex items-center gap-1.5 bg-gray-100 text-gray-700 text-xs font-medium px-3 py-1.5 rounded-full">
                 <CategoryIcon name={activeCategory} className="w-3 h-3 flex-shrink-0" />
                 {activeCategory}
-                <button onClick={() => setActiveCategory(null)} className="ml-1 hover:text-black">
+                <button onClick={() => { setActiveCategory(null); setActiveSubcategory(null); }} className="ml-1 hover:text-black">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+            {activeSubcategory && (
+              <span className="inline-flex items-center gap-1.5 bg-black text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                {activeSubcategory}
+                <button onClick={() => setActiveSubcategory(null)} className="ml-1 hover:text-gray-300">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>

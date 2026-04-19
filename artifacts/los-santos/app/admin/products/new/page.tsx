@@ -10,10 +10,11 @@ import {
   adminGetVariants,
   adminAddProductImages,
   getCategories,
+  getSubcategories,
   uploadProductImage,
 } from "@/services/admin";
 import { MultiImageUpload, type ImageEntry } from "@/components/MultiImageUpload";
-import type { Category, Product, ProductVariant } from "@/types";
+import type { Category, Product, ProductVariant, Subcategory } from "@/types";
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -26,11 +27,15 @@ export default function NewProductPage() {
   const router = useRouter();
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [productForm, setProductForm] = useState({
     name: "",
     description: "",
     category_id: "",
+    subcategory_id: "",
     price: "",
+    featured: false,
+    featured_order: "",
   });
   const [imageEntries, setImageEntries] = useState<ImageEntry[]>([]);
   const [productLoading, setProductLoading] = useState(false);
@@ -47,6 +52,17 @@ export default function NewProductPage() {
       .then(setCategories)
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!productForm.category_id) {
+      setSubcategories([]);
+      setProductForm((f) => ({ ...f, subcategory_id: "" }));
+      return;
+    }
+    getSubcategories(productForm.category_id)
+      .then(setSubcategories)
+      .catch(() => setSubcategories([]));
+  }, [productForm.category_id]);
 
   const handleAddFiles = useCallback((files: File[]) => {
     const newEntries: ImageEntry[] = files.map((file) => ({
@@ -86,8 +102,13 @@ export default function NewProductPage() {
         name: productForm.name.trim(),
         description: productForm.description.trim(),
         category_id: productForm.category_id,
+        subcategory_id: productForm.subcategory_id || undefined,
         price: productForm.price ? parseFloat(productForm.price) : 0,
         image_url: primaryUrl,
+        featured: productForm.featured,
+        featured_order: productForm.featured && productForm.featured_order
+          ? parseInt(productForm.featured_order)
+          : null,
       });
 
       // Save extra images to product_images table
@@ -213,13 +234,13 @@ export default function NewProductPage() {
               />
             </div>
 
-            {/* Category + Price */}
+            {/* Category + Subcategory */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Categoria</label>
                 <select
                   value={productForm.category_id}
-                  onChange={(e) => setProductForm((f) => ({ ...f, category_id: e.target.value }))}
+                  onChange={(e) => setProductForm((f) => ({ ...f, category_id: e.target.value, subcategory_id: "" }))}
                   className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors bg-white"
                 >
                   <option value="">Selecione...</option>
@@ -230,17 +251,70 @@ export default function NewProductPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Preço base (R$)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={productForm.price}
-                  onChange={(e) => setProductForm((f) => ({ ...f, price: e.target.value }))}
-                  placeholder="0,00"
-                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
-                />
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Subcategoria</label>
+                <select
+                  value={productForm.subcategory_id}
+                  onChange={(e) => setProductForm((f) => ({ ...f, subcategory_id: e.target.value }))}
+                  disabled={!productForm.category_id || subcategories.length === 0}
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors bg-white disabled:bg-gray-50 disabled:text-gray-400"
+                >
+                  <option value="">
+                    {!productForm.category_id
+                      ? "Selecione uma categoria"
+                      : subcategories.length === 0
+                      ? "Sem subcategorias"
+                      : "Selecione..."}
+                  </option>
+                  {subcategories.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
               </div>
+            </div>
+
+            {/* Price */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Preço base (R$)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={productForm.price}
+                onChange={(e) => setProductForm((f) => ({ ...f, price: e.target.value }))}
+                placeholder="0,00"
+                className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
+              />
+            </div>
+
+            {/* Featured */}
+            <div className="border border-gray-100 rounded-lg p-4 bg-gray-50/50">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={productForm.featured}
+                  onChange={(e) => setProductForm((f) => ({ ...f, featured: e.target.checked }))}
+                  className="w-4 h-4 rounded border-gray-300 accent-black"
+                />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Produto em destaque</p>
+                  <p className="text-xs text-gray-400">Aparece na seção &quot;Destaques&quot; da home</p>
+                </div>
+              </label>
+              {productForm.featured && (
+                <div className="mt-3 pl-7">
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+                    Ordem (opcional)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={productForm.featured_order}
+                    onChange={(e) => setProductForm((f) => ({ ...f, featured_order: e.target.value }))}
+                    placeholder="Ex: 1 (menor = aparece primeiro)"
+                    className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-black transition-colors bg-white"
+                  />
+                </div>
+              )}
             </div>
 
             {productError && (

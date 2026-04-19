@@ -55,20 +55,38 @@ export default function ProductCard({ product }: Props) {
   const soldOut = isSoldOut(product);
   const badge = getBadge(product);
   const categoryName = product.categories?.name ?? null;
+  const hoverImage = !soldOut ? (product.product_images?.[0]?.image_url ?? null) : null;
 
   const imageArea = (
     <div className="px-3 pt-3">
       <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50">
         {product.image_url ? (
-          <Image
-            src={product.image_url}
-            alt={product.name}
-            fill
-            className={`object-cover transition-transform duration-500 ease-out ${
-              soldOut ? "opacity-50" : "group-hover:scale-[1.04]"
-            }`}
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          />
+          <>
+            {/* Primary image */}
+            <Image
+              src={product.image_url}
+              alt={product.name}
+              fill
+              className={`object-cover transition-all duration-500 ease-out ${
+                soldOut
+                  ? "opacity-50"
+                  : hoverImage
+                  ? "group-hover:opacity-0 group-hover:scale-[1.02]"
+                  : "group-hover:scale-[1.04]"
+              }`}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            />
+            {/* Hover image — second image, desktop only via CSS hover */}
+            {hoverImage && (
+              <Image
+                src={hoverImage}
+                alt={product.name}
+                fill
+                className="object-cover opacity-0 scale-[1.02] group-hover:opacity-100 group-hover:scale-100 transition-all duration-500 ease-out"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              />
+            )}
+          </>
         ) : (
           <div className={`w-full h-full flex items-center justify-center text-gray-200 ${soldOut ? "opacity-50" : ""}`}>
             <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,16 +115,16 @@ export default function ProductCard({ product }: Props) {
   );
 
   const infoArea = (
-    <div className="px-3.5 pt-3 pb-3.5 flex flex-col gap-0.5 flex-1">
+    <div className="px-4 pt-3.5 pb-4 flex flex-col gap-1 flex-1">
       {categoryName && (
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-0.5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400">
           {categoryName}
         </p>
       )}
-      <h3 className={`text-sm leading-snug line-clamp-2 ${soldOut ? "text-gray-400 font-normal" : "text-gray-800 font-semibold"}`}>
+      <h3 className={`text-sm leading-snug line-clamp-2 ${soldOut ? "text-gray-400 font-normal" : "text-gray-900 font-semibold"}`}>
         {product.name}
       </h3>
-      <p className={`text-xl font-black tracking-tight mt-1.5 ${soldOut ? "text-gray-300" : "text-black"}`}>
+      <p className={`text-[17px] font-bold tracking-tight mt-1 ${soldOut ? "text-gray-300" : "text-black"}`}>
         {formatPrice(product.price)}
       </p>
     </div>

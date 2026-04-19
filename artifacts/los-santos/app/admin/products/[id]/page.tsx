@@ -14,10 +14,12 @@ import {
   adminDeleteProductImage,
   adminUpdateProductPrimaryImage,
   uploadProductImage,
+  getCategories,
+  getSubcategories,
 } from "@/services/admin";
 import { getProductById } from "@/services/products";
 import { MultiImageUpload, type ImageEntry } from "@/components/MultiImageUpload";
-import type { Product, ProductImage, ProductVariant } from "@/types";
+import type { Category, Product, ProductImage, ProductVariant, Subcategory } from "@/types";
 
 function formatPrice(value: number) {
   return new Intl.NumberFormat("pt-BR", {
@@ -36,10 +38,18 @@ export default function EditProductPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Categories / subcategories for the info form
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+
   // Product info edit form
   const [infoName, setInfoName] = useState("");
   const [infoDescription, setInfoDescription] = useState("");
   const [infoPrice, setInfoPrice] = useState("");
+  const [infoCategoryId, setInfoCategoryId] = useState("");
+  const [infoSubcategoryId, setInfoSubcategoryId] = useState("");
+  const [infoFeatured, setInfoFeatured] = useState(false);
+  const [infoFeaturedOrder, setInfoFeaturedOrder] = useState("");
   const [infoSaving, setInfoSaving] = useState(false);
   const [infoSaved, setInfoSaved] = useState(false);
   const [infoError, setInfoError] = useState<string | null>(null);
@@ -66,16 +76,22 @@ export default function EditProductPage() {
       getProductById(productId),
       adminGetVariants(productId),
       adminGetProductImages(productId),
+      getCategories(),
     ])
-      .then(([{ product: p, error: prodError }, v, imgs]) => {
+      .then(([{ product: p, error: prodError }, v, imgs, cats]) => {
         if (prodError) setLoadError(prodError);
         setProduct(p);
         setVariants(v);
         setDbImages(imgs);
+        setCategories(cats);
         if (p) {
           setInfoName(p.name);
           setInfoDescription(p.description ?? "");
           setInfoPrice(String(p.price));
+          setInfoCategoryId(p.category_id ?? "");
+          setInfoSubcategoryId(p.subcategory_id ?? "");
+          setInfoFeatured(p.featured ?? false);
+          setInfoFeaturedOrder(p.featured_order != null ? String(p.featured_order) : "");
         }
       })
       .catch((e) => {
@@ -83,6 +99,17 @@ export default function EditProductPage() {
       })
       .finally(() => setLoading(false));
   }, [productId]);
+
+  // Load subcategories whenever the selected category changes
+  useEffect(() => {
+    if (!infoCategoryId) {
+      setSubcategories([]);
+      return;
+    }
+    getSubcategories(infoCategoryId)
+      .then(setSubcategories)
+      .catch(() => setSubcategories([]));
+  }, [infoCategoryId]);
 
   /* ── Product info ─────────────────────────────────────── */
   async function handleSaveInfo(e: React.FormEvent) {
@@ -102,12 +129,32 @@ export default function EditProductPage() {
     setInfoError(null);
     setInfoSaved(false);
     try {
+      const parsedOrder = infoFeaturedOrder.trim()
+        ? parseInt(infoFeaturedOrder.trim())
+        : null;
       await adminUpdateProduct(productId, {
         name: trimmedName,
         description: infoDescription.trim(),
         price: parsedPrice,
+        category_id: infoCategoryId || null,
+        subcategory_id: infoSubcategoryId || null,
+        featured: infoFeatured,
+        featured_order: infoFeatured ? parsedOrder : null,
       });
-      setProduct((p) => p ? { ...p, name: trimmedName, description: infoDescription.trim(), price: parsedPrice } : p);
+      setProduct((p) =>
+        p
+          ? {
+              ...p,
+              name: trimmedName,
+              description: infoDescription.trim(),
+              price: parsedPrice,
+              category_id: infoCategoryId || null,
+              subcategory_id: infoSubcategoryId || null,
+              featured: infoFeatured,
+              featured_order: infoFeatured ? (infoFeaturedOrder.trim() ? parseInt(infoFeaturedOrder.trim()) : null) : null,
+            }
+          : p
+      );
       setInfoSaved(true);
       setTimeout(() => setInfoSaved(false), 3000);
     } catch (e) {
@@ -325,6 +372,81 @@ export default function EditProductPage() {
               className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
               placeholder="0,00"
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+                Categoria
+              </label>
+              <select
+                value={infoCategoryId}
+                onChange={(e) => {
+                  setInfoCategoryId(e.target.value);
+                  setInfoSubcategoryId("");
+                }}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors bg-white"
+              >
+                <option value="">Sem categoria</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+                Subcategoria
+              </label>
+              <select
+                value={infoSubcategoryId}
+                onChange={(e) => setInfoSubcategoryId(e.target.value)}
+                disabled={!infoCategoryId || subcategories.length === 0}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors bg-white disabled:bg-gray-50 disabled:text-gray-400"
+              >
+                <option value="">
+                  {!infoCategoryId
+                    ? "Selecione uma categoria"
+                    : subcategories.length === 0
+                    ? "Sem subcategorias"
+                    : "Sem subcategoria"}
+                </option>
+                {subcategories.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Featured */}
+          <div className="border border-gray-100 rounded-lg p-4 bg-gray-50/50">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={infoFeatured}
+                onChange={(e) => setInfoFeatured(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 accent-black"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-900">Produto em destaque</p>
+                <p className="text-xs text-gray-400">Aparece na seção &quot;Destaques&quot; da home</p>
+              </div>
+            </label>
+            {infoFeatured && (
+              <div className="mt-3 pl-7">
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+                  Ordem (opcional)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={infoFeaturedOrder}
+                  onChange={(e) => setInfoFeaturedOrder(e.target.value)}
+                  placeholder="Ex: 1 (menor = aparece primeiro)"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-black transition-colors bg-white"
+                />
+              </div>
+            )}
           </div>
         </div>
 

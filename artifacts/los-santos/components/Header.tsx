@@ -3,43 +3,40 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/components/CartContext";
+import { useCartUI } from "@/components/CartUIContext";
 
 export default function Header() {
   const { count } = useCart();
+  const { openCart } = useCartUI();
 
   return (
     <header className="sticky top-0 z-50 bg-white/98 backdrop-blur-md border-b border-gray-100 shadow-[0_1px_4px_rgba(0,0,0,0.05)]">
-      <div className="mx-auto flex h-[68px] max-w-6xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-4 sm:px-6">
 
-        {/* Logo + Brand */}
+        {/* Spacer left — mirrors cart button width for centering */}
+        <div className="w-[110px]" />
+
+        {/* Logo — centered */}
         <Link
           href="/"
-          className="flex items-center gap-3 group"
+          className="absolute left-1/2 -translate-x-1/2 group"
           aria-label="Los Santos Store — início"
         >
-          <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl bg-gray-50 ring-1 ring-gray-100 group-hover:ring-gray-200 transition-all">
+          <div className="h-11 w-11 overflow-hidden rounded-xl bg-gray-50 ring-1 ring-gray-100 group-hover:ring-gray-300 transition-all">
             <Image
               src="/logo.png"
-              alt="Los Santos"
+              alt="Los Santos Store"
               width={44}
               height={44}
               className="h-full w-full object-contain"
               priority
             />
           </div>
-          <div className="leading-tight">
-            <p className="text-[15px] font-black tracking-tight text-gray-900 leading-none">
-              Los Santos Store
-            </p>
-            <p className="text-[10px] font-medium tracking-[0.2em] text-gray-400 uppercase mt-1">
-              Moda & Estilo
-            </p>
-          </div>
         </Link>
 
         {/* Cart */}
-        <Link
-          href="/cart"
+        <button
+          onClick={openCart}
           className="relative flex items-center gap-2 bg-gray-950 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-gray-800 active:scale-95 transition-all shadow-sm"
         >
           <svg
@@ -60,7 +57,7 @@ export default function Header() {
               {count}
             </span>
           )}
-        </Link>
+        </button>
 
       </div>
     </header>

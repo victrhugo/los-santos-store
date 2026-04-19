@@ -3,6 +3,12 @@ export interface Category {
   name: string;
 }
 
+export interface Subcategory {
+  id: string;
+  name: string;
+  category_id: string | null;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -10,9 +16,14 @@ export interface Product {
   price: number;
   image_url: string | null;
   category_id: string | null;
+  subcategory_id: string | null;
+  featured: boolean;
+  featured_order: number | null;
   categories: Category | null;
+  subcategories: Subcategory | null;
   created_at: string;
   product_variants?: { stock: number }[];
+  product_images?: { image_url: string }[];
 }
 
 export interface ProductVariant {

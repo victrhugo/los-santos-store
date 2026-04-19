@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { getProductById, getProductVariants, getProductImages } from "@/services/products";
 import { useCart } from "@/components/CartContext";
+import { useCartUI } from "@/components/CartUIContext";
 import { ImageGallery } from "@/components/ImageGallery";
 import { buildProductGalleryUrls } from "@/lib/productGallery";
 import type { Product, ProductVariant } from "@/types";
@@ -67,6 +68,7 @@ export default function ProductPage() {
   const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string | undefined);
   const router = useRouter();
   const { addItem } = useCart();
+  const { openCart } = useCartUI();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [variants, setVariants] = useState<ProductVariant[]>([]);
@@ -74,7 +76,6 @@ export default function ProductPage() {
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [added, setAdded] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -140,8 +141,7 @@ export default function ProductPage() {
   function handleAddToCart() {
     if (!effectiveVariant) return;
     addItem(product!, effectiveVariant);
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
+    openCart();
   }
 
   function handleBuyNow() {
@@ -258,20 +258,9 @@ export default function ProductPage() {
             <button
               onClick={handleAddToCart}
               disabled={!canBuy}
-              className={`w-full inline-flex items-center justify-center gap-2 font-semibold text-sm py-3.5 px-6 rounded-xl border-2 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed ${
-                added
-                  ? "bg-green-50 border-green-500 text-green-700"
-                  : "border-gray-200 text-gray-700 hover:border-black hover:text-black"
-              }`}
+              className="w-full inline-flex items-center justify-center gap-2 font-semibold text-sm py-3.5 px-6 rounded-xl border-2 border-gray-200 text-gray-700 hover:border-black hover:text-black transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {added ? (
-                <>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Adicionado!
-                </>
-              ) : isSoldOut ? (
+              {isSoldOut ? (
                 "Produto esgotado"
               ) : (
                 <>
