@@ -58,6 +58,14 @@ export interface Order {
   created_at?: string;
 }
 
+export interface StoreSettings {
+  id: string;
+  hero_title: string | null;
+  hero_subtitle: string | null;
+  hero_image_url: string | null;
+  updated_at: string;
+}
+
 export interface OrderItem {
   order_id: string;
   product_id: string;

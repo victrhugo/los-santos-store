@@ -1,7 +1,8 @@
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { getProducts, getCategoriesWithSeed, getFeaturedProducts } from "@/services/products";
+import { getStoreSettings } from "@/services/settings";
 import HomeClient from "@/components/HomeClient";
-import type { Category, Product } from "@/types";
+import type { Category, Product, StoreSettings } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -24,13 +25,15 @@ export default async function HomePage() {
   let products: Product[] = [];
   let categories: Category[] = [];
   let featuredProducts: Product[] = [];
+  let settings: StoreSettings | null = null;
   let error: string | null = null;
 
   try {
-    [products, categories, featuredProducts] = await Promise.all([
+    [products, categories, featuredProducts, settings] = await Promise.all([
       getProducts(),
       getCategoriesWithSeed(),
       getFeaturedProducts(),
+      getStoreSettings(),
     ]);
   } catch (e) {
     error = e instanceof Error ? e.message : "Erro ao carregar dados";
@@ -51,6 +54,7 @@ export default async function HomePage() {
       products={products}
       categories={categories}
       featuredProducts={featuredProducts}
+      settings={settings}
     />
   );
 }

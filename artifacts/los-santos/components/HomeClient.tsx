@@ -4,7 +4,8 @@ import { useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import { Shirt, ShoppingBag, Sparkles, Package, Tag } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
-import type { Category, Product, Subcategory } from "@/types";
+import Image from "next/image";
+import type { Category, Product, StoreSettings, Subcategory } from "@/types";
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
   Roupas:     Shirt,
@@ -22,6 +23,7 @@ interface Props {
   products: Product[];
   categories: Category[];
   featuredProducts: Product[];
+  settings: StoreSettings | null;
 }
 
 function filterProducts(
@@ -46,7 +48,7 @@ function filterProducts(
   });
 }
 
-export default function HomeClient({ products, categories, featuredProducts }: Props) {
+export default function HomeClient({ products, categories, featuredProducts, settings }: Props) {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -127,21 +129,37 @@ export default function HomeClient({ products, categories, featuredProducts }: P
 
       {/* Hero */}
       <section className="relative bg-black overflow-hidden">
-        {/* Dot grid */}
-        <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-            backgroundSize: "28px 28px",
-          }}
-        />
-        {/* Color glow */}
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: "radial-gradient(ellipse at 70% 60%, #4f46e5 0%, transparent 60%)",
-          }}
-        />
+        {/* Background: hero image OR default dot grid + glow */}
+        {settings?.hero_image_url ? (
+          <>
+            <Image
+              src={settings.hero_image_url}
+              alt="Hero"
+              fill
+              className="object-cover opacity-50"
+              priority
+              sizes="100vw"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/20" />
+          </>
+        ) : (
+          <>
+            <div
+              className="absolute inset-0 opacity-[0.06]"
+              style={{
+                backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+                backgroundSize: "28px 28px",
+              }}
+            />
+            <div
+              className="absolute inset-0 opacity-20"
+              style={{
+                backgroundImage: "radial-gradient(ellipse at 70% 60%, #4f46e5 0%, transparent 60%)",
+              }}
+            />
+          </>
+        )}
+
         <div className="relative max-w-6xl mx-auto px-4 py-16 sm:py-20 flex flex-col items-start animate-[fadeIn_0.5s_ease]">
           {/* Badge */}
           <span className="inline-flex items-center gap-1.5 bg-white/10 text-white/80 text-[11px] font-semibold tracking-widest uppercase px-3 py-1 rounded-full mb-5 border border-white/15">
@@ -150,17 +168,23 @@ export default function HomeClient({ products, categories, featuredProducts }: P
           </span>
 
           {/* Title */}
-          <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-[1.08] max-w-xl">
-            Los Santos
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-300 to-gray-500">
-              Store
-            </span>
+          <h1 className="text-4xl sm:text-6xl font-black text-white leading-[1.08] max-w-xl">
+            {settings?.hero_title ? (
+              settings.hero_title
+            ) : (
+              <>
+                Los Santos
+                <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-300 to-gray-500">
+                  Store
+                </span>
+              </>
+            )}
           </h1>
 
           {/* Subtitle */}
           <p className="mt-4 text-gray-400 text-sm sm:text-base max-w-sm leading-relaxed">
-            Roupas, acessórios e perfumes com estilo.
+            {settings?.hero_subtitle ?? "Roupas, acessórios e perfumes com estilo."}
           </p>
 
           {/* CTAs */}
