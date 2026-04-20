@@ -23,20 +23,12 @@ function syntheticVariant(product: Product): ProductVariant {
     product_id: product.id,
     name: "Padrão",
     price: product.price,
-    stock: 9999,
+    stock: product.stock ?? 0,
     created_at: product.created_at,
   };
 }
 
-function StockIndicator({ stock, hasRealVariants }: { stock: number; hasRealVariants: boolean }) {
-  if (!hasRealVariants) {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full">
-        <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-        Disponível
-      </span>
-    );
-  }
+function StockIndicator({ stock }: { stock: number }) {
   if (stock <= 0) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 px-3 py-1.5 rounded-full">
@@ -45,7 +37,7 @@ function StockIndicator({ stock, hasRealVariants }: { stock: number; hasRealVari
       </span>
     );
   }
-  if (stock <= 5) {
+  if (stock <= 3) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,7 +50,7 @@ function StockIndicator({ stock, hasRealVariants }: { stock: number; hasRealVari
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full">
       <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-      Em estoque
+      Disponível
     </span>
   );
 }
@@ -132,11 +124,13 @@ export default function ProductPage() {
   }
 
   const hasRealVariants = variants.length > 0;
-  const isSoldOut = hasRealVariants && variants.every((v) => v.stock <= 0);
+  const isSoldOut = hasRealVariants
+    ? variants.every((v) => v.stock <= 0)
+    : (product.stock ?? 0) <= 0;
   const effectiveVariant = selectedVariant ?? (hasRealVariants ? null : syntheticVariant(product));
   const displayPrice = effectiveVariant ? effectiveVariant.price : product.price;
-  const canBuy = !isSoldOut && effectiveVariant !== null && (hasRealVariants ? effectiveVariant.stock > 0 : true);
-  const stockCount = hasRealVariants ? (effectiveVariant?.stock ?? 0) : 9999;
+  const canBuy = !isSoldOut && effectiveVariant !== null && effectiveVariant.stock > 0;
+  const stockCount = effectiveVariant?.stock ?? 0;
 
   function handleAddToCart() {
     if (!effectiveVariant) return;
@@ -189,7 +183,7 @@ export default function ProductPage() {
 
           {/* Stock indicator */}
           <div className="mb-6">
-            <StockIndicator stock={stockCount} hasRealVariants={hasRealVariants} />
+            <StockIndicator stock={stockCount} />
           </div>
 
           {/* Divider */}

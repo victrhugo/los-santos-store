@@ -11,7 +11,7 @@ function formatPrice(value: number) {
 }
 
 export default function CartDrawer() {
-  const { items, total, addItem, removeItem } = useCart();
+  const { items, total, addItem, removeItem, updateQuantity } = useCart();
   const { isOpen, closeCart } = useCartUI();
   const overlayRef = useRef<HTMLDivElement>(null);
 
@@ -133,7 +133,7 @@ export default function CartDrawer() {
                   {/* Qty controls */}
                   <div className="flex items-center gap-2 mt-2">
                     <button
-                      onClick={() => removeItem(item.variant.id)}
+                      onClick={() => updateQuantity(item.variant.id, item.quantity - 1)}
                       className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-gray-900 hover:text-black transition-all text-sm font-bold"
                       aria-label="Remover um"
                     >
@@ -144,7 +144,8 @@ export default function CartDrawer() {
                     </span>
                     <button
                       onClick={() => addItem(item.product, item.variant)}
-                      className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-gray-900 hover:text-black transition-all text-sm font-bold"
+                      disabled={item.quantity >= item.variant.stock}
+                      className="w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-gray-900 hover:text-black transition-all text-sm font-bold disabled:opacity-30 disabled:cursor-not-allowed"
                       aria-label="Adicionar um"
                     >
                       +

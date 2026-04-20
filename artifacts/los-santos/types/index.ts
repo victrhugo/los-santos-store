@@ -14,6 +14,7 @@ export interface Product {
   name: string;
   description: string | null;
   price: number;
+  stock: number;
   image_url: string | null;
   category_id: string | null;
   subcategory_id: string | null;

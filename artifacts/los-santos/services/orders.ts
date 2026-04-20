@@ -1,6 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import type { Order, OrderItem } from "@/types";
 
+// Discriminated union so rollback knows which table to restore
+type StockUpdate =
+  | { kind: "variant"; id: string; currentStock: number; nextStock: number }
+  | { kind: "product"; id: string; currentStock: number; nextStock: number };
+
 function getMissingSchemaColumn(error: unknown): string | null {
   const err = error as { message?: string; code?: string };
   const raw = (err.message ?? "").trim();
@@ -70,83 +75,160 @@ async function insertOrderItems(
   return await supabase.from("order_items").insert(orderItems);
 }
 
-async function prepareStockUpdates(items: Omit<OrderItem, "order_id">[]) {
-  const variantIds = Array.from(
-    new Set(items.map((item) => item.variant_id).filter((id): id is string => Boolean(id)))
-  );
+/**
+ * Prepares stock update plan for both real variants and no-variant products.
+ * Throws if any item has insufficient stock or is not found.
+ */
+async function prepareStockUpdates(
+  items: Omit<OrderItem, "order_id">[]
+): Promise<StockUpdate[]> {
+  const updates: StockUpdate[] = [];
 
-  if (variantIds.length === 0) return [];
+  // Aggregate quantities: real variants vs. synthetic (product-level) stock
+  const variantQty = new Map<string, number>();
+  const productQty = new Map<string, number>();
 
-  const { data, error } = await supabase
-    .from("product_variants")
-    .select("id, stock")
-    .in("id", variantIds);
-
-  if (error) {
-    throw new Error("Não foi possível verificar o estoque antes de finalizar o pedido.");
-  }
-
-  const stockByVariantId = new Map(
-    (data ?? []).map((row) => [row.id as string, Number(row.stock ?? 0)])
-  );
-
-  const quantityByVariantId = new Map<string, number>();
   for (const item of items) {
-    if (!item.variant_id) continue;
-    quantityByVariantId.set(
-      item.variant_id,
-      (quantityByVariantId.get(item.variant_id) ?? 0) + item.quantity
-    );
+    const isSynthetic =
+      item.variant_id === null || item.variant_id === item.product_id;
+    if (isSynthetic) {
+      productQty.set(
+        item.product_id,
+        (productQty.get(item.product_id) ?? 0) + item.quantity
+      );
+    } else {
+      variantQty.set(
+        item.variant_id!,
+        (variantQty.get(item.variant_id!) ?? 0) + item.quantity
+      );
+    }
   }
 
-  return Array.from(quantityByVariantId.entries()).map(([variantId, quantity]) => {
-    const currentStock = stockByVariantId.get(variantId);
+  // ── Real variant stock ─────────────────────────────────────
+  if (variantQty.size > 0) {
+    const { data, error } = await supabase
+      .from("product_variants")
+      .select("id, stock")
+      .in("id", Array.from(variantQty.keys()));
 
-    if (currentStock === undefined) {
-      throw new Error("Uma variação do carrinho não foi encontrada. Atualize a página e tente de novo.");
+    if (error) {
+      throw new Error(
+        "Não foi possível verificar o estoque antes de finalizar o pedido."
+      );
     }
 
-    if (currentStock < quantity) {
-      throw new Error("Uma variação do carrinho não tem estoque suficiente para esse pedido.");
+    const rows = data ?? [];
+    for (const [variantId, qty] of variantQty) {
+      const row = rows.find((r) => r.id === variantId);
+      if (!row) {
+        throw new Error(
+          "Uma variação do carrinho não foi encontrada. Atualize a página e tente de novo."
+        );
+      }
+      const current = Number(row.stock ?? 0);
+      if (current < qty) {
+        throw new Error(
+          "Uma variação do carrinho não tem estoque suficiente para esse pedido."
+        );
+      }
+      updates.push({ kind: "variant", id: variantId, currentStock: current, nextStock: current - qty });
+    }
+  }
+
+  // ── Product-level stock (no-variant / Padrão) ──────────────
+  if (productQty.size > 0) {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, stock")
+      .in("id", Array.from(productQty.keys()));
+
+    if (error) {
+      throw new Error(
+        "Não foi possível verificar o estoque antes de finalizar o pedido."
+      );
     }
 
-    return {
-      variantId,
-      currentStock,
-      nextStock: currentStock - quantity,
-    };
-  });
+    const rows = data ?? [];
+    for (const [productId, qty] of productQty) {
+      const row = rows.find((r) => r.id === productId);
+      if (!row) {
+        throw new Error(
+          "Um produto do carrinho não foi encontrado. Atualize a página e tente de novo."
+        );
+      }
+      const current = Number(row.stock ?? 0);
+      if (current <= 0) {
+        throw new Error("Um produto do carrinho está esgotado.");
+      }
+      if (current < qty) {
+        throw new Error(
+          "Um produto do carrinho não tem estoque suficiente para esse pedido."
+        );
+      }
+      updates.push({ kind: "product", id: productId, currentStock: current, nextStock: current - qty });
+    }
+  }
+
+  return updates;
 }
 
-async function applyStockUpdates(
-  updates: Array<{ variantId: string; currentStock: number; nextStock: number }>
-) {
-  const applied: Array<{ variantId: string; previousStock: number }> = [];
+/**
+ * Applies stock updates with optimistic locking.
+ * Rolls back already-applied updates if any step fails (race condition guard).
+ */
+async function applyStockUpdates(updates: StockUpdate[]) {
+  const applied: StockUpdate[] = [];
 
   try {
     for (const update of updates) {
-      const { data, error } = await supabase
-        .from("product_variants")
-        .update({ stock: update.nextStock })
-        .eq("id", update.variantId)
-        .eq("stock", update.currentStock)
-        .select("id")
-        .maybeSingle();
+      if (update.kind === "variant") {
+        const { data, error } = await supabase
+          .from("product_variants")
+          .update({ stock: update.nextStock })
+          .eq("id", update.id)
+          .eq("stock", update.currentStock) // optimistic lock
+          .select("id")
+          .maybeSingle();
 
-      if (error || !data) {
-        throw new Error("O estoque mudou enquanto o pedido era finalizado. Atualize a página e tente novamente.");
+        if (error || !data) {
+          throw new Error(
+            "O estoque mudou enquanto o pedido era finalizado. Atualize a página e tente novamente."
+          );
+        }
+      } else {
+        const { data, error } = await supabase
+          .from("products")
+          .update({ stock: update.nextStock })
+          .eq("id", update.id)
+          .eq("stock", update.currentStock) // optimistic lock
+          .select("id")
+          .maybeSingle();
+
+        if (error || !data) {
+          throw new Error(
+            "O estoque mudou enquanto o pedido era finalizado. Atualize a página e tente novamente."
+          );
+        }
       }
 
-      applied.push({ variantId: update.variantId, previousStock: update.currentStock });
+      applied.push(update);
     }
   } catch (error) {
+    // Rollback any updates already applied
     await Promise.all(
-      applied.map((item) =>
-        supabase
-          .from("product_variants")
-          .update({ stock: item.previousStock })
-          .eq("id", item.variantId)
-      )
+      applied.map((u) => {
+        if (u.kind === "variant") {
+          return supabase
+            .from("product_variants")
+            .update({ stock: u.currentStock })
+            .eq("id", u.id);
+        } else {
+          return supabase
+            .from("products")
+            .update({ stock: u.currentStock })
+            .eq("id", u.id);
+        }
+      })
     );
     throw error;
   }
@@ -196,6 +278,7 @@ export async function createOrder(
     throw new Error("Seu carrinho está vazio.");
   }
 
+  // Validate and prepare stock updates BEFORE creating the order
   const stockUpdates = await prepareStockUpdates(items);
 
   const { data: orderData, error: orderError } = await insertOrder({

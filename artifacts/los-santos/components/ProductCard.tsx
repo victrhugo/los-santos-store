@@ -15,7 +15,7 @@ function formatPrice(value: number) {
 
 function isSoldOut(product: Product): boolean {
   const variants = product.product_variants ?? [];
-  if (variants.length === 0) return false;
+  if (variants.length === 0) return (product.stock ?? 0) <= 0;
   return variants.every((v) => v.stock <= 0);
 }
 
@@ -31,9 +31,12 @@ function isNew(product: Product): boolean {
 
 function isLowStock(product: Product): boolean {
   const variants = product.product_variants ?? [];
-  if (variants.length === 0) return false;
+  if (variants.length === 0) {
+    const s = product.stock ?? 0;
+    return s > 0 && s <= 3;
+  }
   const total = variants.reduce((sum, v) => sum + v.stock, 0);
-  return total > 0 && total <= 5;
+  return total > 0 && total <= 3;
 }
 
 type BadgeKind = "soldout" | "low" | "new" | null;

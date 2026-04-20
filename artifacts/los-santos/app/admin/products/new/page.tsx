@@ -34,6 +34,7 @@ export default function NewProductPage() {
     category_id: "",
     subcategory_id: "",
     price: "",
+    stock: "",
     featured: false,
     featured_order: "",
   });
@@ -104,6 +105,7 @@ export default function NewProductPage() {
         category_id: productForm.category_id,
         subcategory_id: productForm.subcategory_id || undefined,
         price: productForm.price ? parseFloat(productForm.price) : 0,
+        stock: productForm.stock ? parseInt(productForm.stock) : 99,
         image_url: primaryUrl,
         featured: productForm.featured,
         featured_order: productForm.featured && productForm.featured_order
@@ -272,18 +274,34 @@ export default function NewProductPage() {
               </div>
             </div>
 
-            {/* Price */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Preço base (R$)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={productForm.price}
-                onChange={(e) => setProductForm((f) => ({ ...f, price: e.target.value }))}
-                placeholder="0,00"
-                className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
-              />
+            {/* Price + Stock */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">Preço base (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={productForm.price}
+                  onChange={(e) => setProductForm((f) => ({ ...f, price: e.target.value }))}
+                  placeholder="0,00"
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+                  Estoque padrão
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={productForm.stock}
+                  onChange={(e) => setProductForm((f) => ({ ...f, stock: e.target.value }))}
+                  placeholder="99"
+                  className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
+                />
+                <p className="text-[11px] text-gray-400 mt-1">Usado quando não há variações</p>
+              </div>
             </div>
 
             {/* Featured */}

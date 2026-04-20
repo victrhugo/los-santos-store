@@ -46,6 +46,7 @@ export default function EditProductPage() {
   const [infoName, setInfoName] = useState("");
   const [infoDescription, setInfoDescription] = useState("");
   const [infoPrice, setInfoPrice] = useState("");
+  const [infoStock, setInfoStock] = useState("");
   const [infoCategoryId, setInfoCategoryId] = useState("");
   const [infoSubcategoryId, setInfoSubcategoryId] = useState("");
   const [infoFeatured, setInfoFeatured] = useState(false);
@@ -88,6 +89,7 @@ export default function EditProductPage() {
           setInfoName(p.name);
           setInfoDescription(p.description ?? "");
           setInfoPrice(String(p.price));
+          setInfoStock(String(p.stock ?? 99));
           setInfoCategoryId(p.category_id ?? "");
           setInfoSubcategoryId(p.subcategory_id ?? "");
           setInfoFeatured(p.featured ?? false);
@@ -136,6 +138,7 @@ export default function EditProductPage() {
         name: trimmedName,
         description: infoDescription.trim(),
         price: parsedPrice,
+        stock: infoStock ? parseInt(infoStock) : undefined,
         category_id: infoCategoryId || null,
         subcategory_id: infoSubcategoryId || null,
         featured: infoFeatured,
@@ -359,19 +362,35 @@ export default function EditProductPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
-              Preço base (R$)
-            </label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={infoPrice}
-              onChange={(e) => setInfoPrice(e.target.value)}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
-              placeholder="0,00"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+                Preço base (R$)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={infoPrice}
+                onChange={(e) => setInfoPrice(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
+                placeholder="0,00"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+                Estoque padrão
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={infoStock}
+                onChange={(e) => setInfoStock(e.target.value)}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-black transition-colors"
+                placeholder="99"
+              />
+              <p className="text-[11px] text-gray-400 mt-1">Usado quando não há variações</p>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -37,6 +37,7 @@ export interface CreateProductInput {
   category_id: string;
   subcategory_id?: string;
   price?: number;
+  stock?: number;
   image_url?: string;
   featured?: boolean;
   featured_order?: number | null;
@@ -111,6 +112,7 @@ export async function adminCreateProduct(
       category_id: input.category_id || null,
       subcategory_id: input.subcategory_id || null,
       price: input.price ?? 0,
+      stock: input.stock ?? 99,
       image_url: input.image_url || null,
       featured: input.featured ?? false,
       featured_order: input.featured_order ?? null,
@@ -266,6 +268,7 @@ export async function adminUpdateProduct(
     name: string;
     description: string;
     price: number;
+    stock?: number;
     category_id?: string | null;
     subcategory_id?: string | null;
     featured?: boolean;
@@ -278,6 +281,7 @@ export async function adminUpdateProduct(
       name: input.name,
       description: input.description || null,
       price: input.price,
+      ...(input.stock !== undefined && { stock: input.stock }),
       ...(input.category_id !== undefined && { category_id: input.category_id || null }),
       ...(input.subcategory_id !== undefined && { subcategory_id: input.subcategory_id || null }),
       ...(input.featured !== undefined && { featured: input.featured }),
